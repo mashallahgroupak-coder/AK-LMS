@@ -1,0 +1,189 @@
+{
+  "entities": {
+    "Course": {
+      "title": "Course",
+      "description": "An educational course or training topic listed in the curriculum.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the course (e.g., TRG-01)." },
+        "name": { "type": "string", "description": "Name of the training course." },
+        "trainer": { "type": "string", "description": "Name or title of the instructor." },
+        "department": { "type": "string", "description": "Department this course applies to." },
+        "frequency": { "type": "string", "description": "How often the course is offered." },
+        "topics": { "type": "array", "description": "List of topics covered in the course." },
+        "scope": { "type": "string", "enum": ["Professional/Technical", "Systems/Sustainability", "Social Compliance", "Other"] },
+        "method": { "type": "string", "enum": ["Lecture/Presentation", "Practical/Demonstration", "Associating with senior", "Other"] },
+        "durationHours": { "type": "number" },
+        "durationMinutes": { "type": "number" }
+      },
+      "required": ["id", "name", "trainer", "department", "frequency", "topics", "scope", "method", "durationHours", "durationMinutes"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "An employee eligible for core training and assessment logs.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "description": "Unique company code (e.g., AGI-1021)." },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "designation": { "type": "string" },
+        "department": { "type": "string" },
+        "unit": { "type": "string" },
+        "hodName": { "type": "string" },
+        "hodEmail": { "type": "string" }
+      },
+      "required": ["code", "name", "email", "designation", "department", "unit"]
+    },
+    "TrainingEvent": {
+      "title": "TrainingEvent",
+      "description": "A scheduled or executed training session event.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "courseId": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "trgRef": { "type": "string" },
+        "sheetNo": { "type": "string" },
+        "isTNA": { "type": "boolean" },
+        "isRefresher": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["Scheduled", "Completed", "Cancelled"] },
+        "attendees": { "type": "array" },
+        "trainerSignature": { "type": "string" },
+        "hodSignature": { "type": "string" },
+        "gmSignature": { "type": "string" }
+      },
+      "required": ["id", "courseId", "date", "time", "trgRef", "sheetNo", "isTNA", "isRefresher", "status", "attendees"]
+    },
+    "SkillRating": {
+      "title": "SkillRating",
+      "description": "The skill level evaluation rating of an employee on a particular course.",
+      "type": "object",
+      "properties": {
+        "employeeCode": { "type": "string" },
+        "courseId": { "type": "string" },
+        "level": { "type": "number" }
+      },
+      "required": ["employeeCode", "courseId", "level"]
+    },
+    "IndividualPreAssessment": {
+      "title": "IndividualPreAssessment",
+      "description": "An individual Training Needs Assessment (TNA) and evaluation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeCode": { "type": "string" },
+        "purpose": { "type": "string", "enum": ["New Employee", "Career Planning & development", "Induction of new machinery / method / system", "Audit / frequent Non-conformity", "Other"] },
+        "otherPurposeDetail": { "type": "string" },
+        "trainingSubject": { "type": "string" },
+        "topicsNeedToBeCovered": { "type": "array" },
+        "scope": { "type": "string", "enum": ["Professional/Technical", "Systems/Sustainability", "Social Compliance", "Other"] },
+        "method": { "type": "string", "enum": ["Lecture/Presentation", "Practical/Demonstration", "Associating with senior", "Other"] },
+        "externalLearningTransferred": { "type": "boolean" },
+        "assessedByName": { "type": "string" },
+        "assessedByDesignation": { "type": "string" },
+        "assessedByDate": { "type": "string" },
+        "isEvaluated": { "type": "boolean" },
+        "evaluationScores": { "type": "object" },
+        "evaluationHODRating": { "type": "string", "enum": ["Unsatisfactory", "Satisfactory", "Good", "Excellent"] },
+        "evaluatedByName": { "type": "string" },
+        "evaluatedByDesignation": { "type": "string" },
+        "evaluatedByDate": { "type": "string" }
+      },
+      "required": ["id", "employeeCode", "purpose", "trainingSubject", "topicsNeedToBeCovered", "scope", "method", "externalLearningTransferred", "assessedByName", "assessedByDesignation", "assessedByDate", "isEvaluated"]
+    },
+    "DepartmentalPreAssessment": {
+      "title": "DepartmentalPreAssessment",
+      "description": "A departmental Training Needs Assessment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "department": { "type": "string" },
+        "purpose": { "type": "string", "enum": ["Career Planning & Development", "Induction of New Machinery / Method / System", "Audit / Frequent Non-Conformity", "Other"] },
+        "otherPurposeDetail": { "type": "string" },
+        "trainingSubject": { "type": "string" },
+        "scope": { "type": "string", "enum": ["Professional/Technical", "Systems/Sustainability", "Social Compliance", "Other"] },
+        "method": { "type": "string", "enum": ["Lecture/Presentation", "Practical/Demonstration", "Associating with senior", "Other"] },
+        "otherMethodDetail": { "type": "string" },
+        "assessedByName": { "type": "string" },
+        "assessedByDesignation": { "type": "string" },
+        "assessedByDate": { "type": "string" },
+        "isEvaluated": { "type": "boolean" },
+        "evaluationScores": { "type": "object" },
+        "evaluationHODRating": { "type": "string", "enum": ["Unsatisfactory", "Satisfactory", "Good", "Excellent"] },
+        "evaluatedByName": { "type": "string" },
+        "evaluatedByDesignation": { "type": "string" },
+        "evaluatedByDate": { "type": "string" }
+      },
+      "required": ["id", "department", "purpose", "trainingSubject", "scope", "method", "assessedByName", "assessedByDesignation", "assessedByDate", "isEvaluated"]
+    },
+    "PostAssessmentFeedback": {
+      "title": "PostAssessmentFeedback",
+      "description": "Feedback submitted by a trainee after attending a training event.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trainingEventId": { "type": "string" },
+        "employeeCode": { "type": "string" },
+        "scores": { "type": "object" },
+        "coveredBest": { "type": "string" },
+        "needsImprovement": { "type": "string" },
+        "moreEffectiveBy": { "type": "string" },
+        "applicationPlan": { "type": "string" },
+        "shouldRepeat": { "type": "boolean" },
+        "repeatFrequency": { "type": "string" },
+        "additionalTrainingHelpful": { "type": "string" },
+        "generalSuggestions": { "type": "string" },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["id", "trainingEventId", "employeeCode", "scores", "coveredBest", "needsImprovement", "moreEffectiveBy", "applicationPlan", "shouldRepeat", "submittedAt"]
+    },
+    "PostAssessmentMark": {
+      "title": "PostAssessmentMark",
+      "description": "Obtained marks of a trainee for a specific training event evaluation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trainingEventId": { "type": "string" },
+        "employeeCode": { "type": "string" },
+        "obtainedMarks": { "type": "number" },
+        "totalMarks": { "type": "number" }
+      },
+      "required": ["id", "trainingEventId", "employeeCode", "obtainedMarks", "totalMarks"]
+    }
+  },
+  "firestore": {
+    "courses/{courseId}": {
+      "schema": "Course",
+      "description": "Curriculum courses catalog."
+    },
+    "employees/{employeeCode}": {
+      "schema": "Employee",
+      "description": "AGI Denim operational personnel repository."
+    },
+    "events/{eventId}": {
+      "schema": "TrainingEvent",
+      "description": "Training events schedules, times, and attendees logs."
+    },
+    "skills/{skillId}": {
+      "schema": "SkillRating",
+      "description": "Individual multi-tiered skill rating evaluations."
+    },
+    "individualPre/{preId}": {
+      "schema": "IndividualPreAssessment",
+      "description": "Pre-training Individual TNA sheets."
+    },
+    "departmentalPre/{preId}": {
+      "schema": "DepartmentalPreAssessment",
+      "description": "Pre-training Departmental TNA sheets."
+    },
+    "feedbacks/{feedbackId}": {
+      "schema": "PostAssessmentFeedback",
+      "description": "Post-training feedback submission forms."
+    },
+    "postMarks/{markId}": {
+      "schema": "PostAssessmentMark",
+      "description": "Trainee obtained and total exam/practical evaluation scores."
+    }
+  }
+}

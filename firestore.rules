@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny catch-all rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints for Entities ---
+
+    function isValidCourse(data) {
+      return data.id is string && data.id.size() <= 64 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.trainer is string && data.trainer.size() <= 200 &&
+             data.department is string && data.department.size() <= 100 &&
+             data.frequency is string && data.frequency.size() <= 100 &&
+             data.topics is list && data.topics.size() <= 50 &&
+             data.scope is string && (data.scope == 'Professional/Technical' || data.scope == 'Systems/Sustainability' || data.scope == 'Social Compliance' || data.scope == 'Other') &&
+             data.method is string && (data.method == 'Lecture/Presentation' || data.method == 'Practical/Demonstration' || data.method == 'Associating with senior' || data.method == 'Other') &&
+             data.durationHours is number &&
+             data.durationMinutes is number;
+    }
+
+    function isValidEmployee(data) {
+      return data.code is string && data.code.size() <= 64 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.designation is string && data.designation.size() <= 200 &&
+             data.department is string && data.department.size() <= 100 &&
+             data.unit is string && data.unit.size() <= 100;
+    }
+
+    function isValidTrainingEvent(data) {
+      return data.id is string && data.id.size() <= 64 &&
+             data.courseId is string && data.courseId.size() <= 64 &&
+             data.date is string && data.date.size() <= 30 &&
+             data.time is string && data.time.size() <= 100 &&
+             data.trgRef is string && data.trgRef.size() <= 100 &&
+             data.sheetNo is string && data.sheetNo.size() <= 100 &&
+             data.isTNA is bool &&
+             data.isRefresher is bool &&
+             data.status is string && (data.status == 'Scheduled' || data.status == 'Completed' || data.status == 'Cancelled') &&
+             data.attendees is list && data.attendees.size() <= 1000;
+    }
+
+    function isValidSkillRating(data) {
+      return data.employeeCode is string && data.employeeCode.size() <= 64 &&
+             data.courseId is string && data.courseId.size() <= 64 &&
+             data.level is number && data.level >= 0 && data.level <= 5;
+    }
+
+    function isValidIndividualPreAssessment(data) {
+      return data.id is string && data.id.size() <= 64 &&
+             data.employeeCode is string && data.employeeCode.size() <= 64 &&
+             data.purpose is string && (data.purpose == 'New Employee' || data.purpose == 'Career Planning & development' || data.purpose == 'Induction of new machinery / method / system' || data.purpose == 'Audit / frequent Non-conformity' || data.purpose == 'Other') &&
+             data.trainingSubject is string && data.trainingSubject.size() <= 200 &&
+             data.topicsNeedToBeCovered is list && data.topicsNeedToBeCovered.size() <= 50 &&
+             data.scope is string && (data.scope == 'Professional/Technical' || data.scope == 'Systems/Sustainability' || data.scope == 'Social Compliance' || data.scope == 'Other') &&
+             data.method is string && (data.method == 'Lecture/Presentation' || data.method == 'Practical/Demonstration' || data.method == 'Associating with senior' || data.method == 'Other') &&
+             data.externalLearningTransferred is bool &&
+             data.assessedByName is string && data.assessedByName.size() <= 200 &&
+             data.assessedByDesignation is string && data.assessedByDesignation.size() <= 200 &&
+             data.assessedByDate is string && data.assessedByDate.size() <= 30 &&
+             data.isEvaluated is bool;
+    }
+
+    function isValidDepartmentalPreAssessment(data) {
+      return data.id is string && data.id.size() <= 64 &&
+             data.department is string && data.department.size() <= 100 &&
+             data.purpose is string && (data.purpose == 'Career Planning & Development' || data.purpose == 'Induction of New Machinery / Method / System' || data.purpose == 'Audit / Frequent Non-Conformity' || data.purpose == 'Other') &&
+             data.trainingSubject is string && data.trainingSubject.size() <= 200 &&
+             data.scope is string && (data.scope == 'Professional/Technical' || data.scope == 'Systems/Sustainability' || data.scope == 'Social Compliance' || data.scope == 'Other') &&
+             data.method is string && (data.method == 'Lecture/Presentation' || data.method == 'Practical/Demonstration' || data.method == 'Associating with senior' || data.method == 'Other') &&
+             data.assessedByName is string && data.assessedByName.size() <= 200 &&
+             data.assessedByDesignation is string && data.assessedByDesignation.size() <= 200 &&
+             data.assessedByDate is string && data.assessedByDate.size() <= 30 &&
+             data.isEvaluated is bool;
+    }
+
+    // PostAssessmentFeedback Guard
+    function isValidPostAssessmentFeedback(data) {
+      return data.id is string && data.id.size() <= 64 &&
+             data.trainingEventId is string && data.trainingEventId.size() <= 64 &&
+             data.employeeCode is string && data.employeeCode.size() <= 64 &&
+             data.coveredBest is string && data.coveredBest.size() <= 1000 &&
+             data.needsImprovement is string && data.needsImprovement.size() <= 1000 &&
+             data.moreEffectiveBy is string && data.moreEffectiveBy.size() <= 1000 &&
+             data.applicationPlan is string && data.applicationPlan.size() <= 1000 &&
+             data.shouldRepeat is bool &&
+             data.submittedAt is string && data.submittedAt.size() <= 50;
+    }
+
+    // PostAssessmentMark Guard
+    function isValidPostAssessmentMark(data) {
+      return data.id is string && data.id.size() <= 64 &&
+             data.trainingEventId is string && data.trainingEventId.size() <= 64 &&
+             data.employeeCode is string && data.employeeCode.size() <= 64 &&
+             data.obtainedMarks is number && data.obtainedMarks >= 0 &&
+             data.totalMarks is number && data.totalMarks > 0;
+    }
+
+    // --- Collection Custom Rules ---
+
+    match /courses/{courseId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(courseId) && isValidCourse(incoming());
+      allow delete: if isSignedIn() && isValidId(courseId);
+    }
+
+    match /employees/{employeeCode} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(employeeCode) && isValidEmployee(incoming());
+      allow delete: if isSignedIn() && isValidId(employeeCode);
+    }
+
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(eventId) && isValidTrainingEvent(incoming());
+      allow delete: if isSignedIn() && isValidId(eventId);
+    }
+
+    match /skills/{skillId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(skillId) && isValidSkillRating(incoming());
+      allow delete: if isSignedIn() && isValidId(skillId);
+    }
+
+    match /individualPre/{preId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(preId) && isValidIndividualPreAssessment(incoming());
+      allow delete: if isSignedIn() && isValidId(preId);
+    }
+
+    match /departmentalPre/{preId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(preId) && isValidDepartmentalPreAssessment(incoming());
+      allow delete: if isSignedIn() && isValidId(preId);
+    }
+
+    match /feedbacks/{feedbackId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(feedbackId) && isValidPostAssessmentFeedback(incoming());
+      allow delete: if isSignedIn() && isValidId(feedbackId);
+    }
+
+    match /postMarks/{markId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(markId) && isValidPostAssessmentMark(incoming());
+      allow delete: if isSignedIn() && isValidId(markId);
+    }
+  }
+}

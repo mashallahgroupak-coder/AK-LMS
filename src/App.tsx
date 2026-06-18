@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getLMSData, saveLMSData, INITIAL_COURSES, INITIAL_EMPLOYEES, INITIAL_EVENTS, INITIAL_SKILLS, INITIAL_INDIVIDUAL_PRE_ASSESSMENTS, INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS, INITIAL_FEEDBACKS, INITIAL_POST_MARKS } from './data';
 import { Course, Employee, TrainingEvent, SkillRating, IndividualPreAssessment, DepartmentalPreAssessment, PostAssessmentFeedback, PostAssessmentMark } from './types';
 import { DashboardOverview } from './components/DashboardOverview';
@@ -13,6 +13,10 @@ import { PostAssessment } from './components/PostAssessment';
 import { TrainingReports } from './components/TrainingReports';
 import { AgiDenimLogo } from './components/AgiDenimLogo';
 
+import { User, onAuthStateChanged } from 'firebase/auth';
+import { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { auth, db as firestoreDb, handleFirestoreError, OperationType, loginWithGoogle, logoutUser } from './firebase';
+
 import { 
   Building2, LayoutDashboard, FileCheck2, Grid, CalendarDays, BookOpenText, 
   SendToBack, ClipboardList, BarChart4, ClipboardCheck, FileSpreadsheet, RefreshCw 
@@ -22,6 +26,96 @@ export default function App() {
   const [db, setDb] = useState(() => getLMSData());
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isApkMode, setIsApkMode] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  // Synchronize Auth and load/write Firestore
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        setIsSyncing(true);
+        try {
+          const coursesSnap = await getDocs(collection(firestoreDb, 'courses'));
+          if (coursesSnap.empty) {
+            // Seed default values to Firestore for immediate sandbox preview
+            for (const course of INITIAL_COURSES) {
+              await setDoc(doc(firestoreDb, 'courses', course.id), course);
+            }
+            for (const emp of INITIAL_EMPLOYEES) {
+              await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
+            }
+            for (const ev of INITIAL_EVENTS) {
+              await setDoc(doc(firestoreDb, 'events', ev.id), ev);
+            }
+            for (const sk of INITIAL_SKILLS) {
+              const skillId = `${sk.employeeCode}_${sk.courseId}`;
+              await setDoc(doc(firestoreDb, 'skills', skillId), sk);
+            }
+            for (const ind of INITIAL_INDIVIDUAL_PRE_ASSESSMENTS) {
+              await setDoc(doc(firestoreDb, 'individualPre', ind.id), ind);
+            }
+            for (const dept of INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS) {
+              await setDoc(doc(firestoreDb, 'departmentalPre', dept.id), dept);
+            }
+            for (const fb of INITIAL_FEEDBACKS) {
+              await setDoc(doc(firestoreDb, 'feedbacks', fb.id), fb);
+            }
+            for (const pm of INITIAL_POST_MARKS) {
+              await setDoc(doc(firestoreDb, 'postMarks', pm.id), pm);
+            }
+          }
+        } catch (err) {
+          handleFirestoreError(err, OperationType.GET, 'init-seed');
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Subscriptions to Firestore collections
+  useEffect(() => {
+    if (!user) {
+      // Revert to local storage state if guest/offline
+      setDb(getLMSData());
+      return;
+    }
+
+    const unsubscribes: (() => void)[] = [];
+
+    const handleSnap = <T,>(collectionName: string, stateField: keyof typeof db, parser: (doc: any) => T) => {
+      unsubscribes.push(
+        onSnapshot(
+          collection(firestoreDb, collectionName),
+          (snap) => {
+            const items = snap.docs.map(doc => parser(doc.data()));
+            setDb(prev => ({
+              ...prev,
+              [stateField]: items
+            }));
+          },
+          (error) => {
+            handleFirestoreError(error, OperationType.GET, collectionName);
+          }
+        )
+      );
+    };
+
+    handleSnap('courses', 'courses', d => d);
+    handleSnap('employees', 'employees', d => d);
+    handleSnap('events', 'events', d => d);
+    handleSnap('skills', 'skills', d => d);
+    handleSnap('individualPre', 'individualPre', d => d);
+    handleSnap('departmentalPre', 'departmentalPre', d => d);
+    handleSnap('feedbacks', 'feedbacks', d => d);
+    handleSnap('postMarks', 'postMarks', d => d);
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, [user]);
 
   const updateDb = (updater: (prev: typeof db) => typeof db) => {
     setDb(prev => {
@@ -32,174 +126,394 @@ export default function App() {
   };
 
   // State handles
-  const handleAddCourse = (course: Course) => {
-    updateDb(prev => ({
-      ...prev,
-      courses: [...prev.courses, course]
-    }));
-  };
-
-  const handleAddIndividualPre = (tna: IndividualPreAssessment) => {
-    updateDb(prev => ({
-      ...prev,
-      individualPre: [tna, ...prev.individualPre]
-    }));
-  };
-
-  const handleAddDepartmentalPre = (tna: DepartmentalPreAssessment) => {
-    updateDb(prev => ({
-      ...prev,
-      departmentalPre: [tna, ...prev.departmentalPre]
-    }));
-  };
-
-  const handleEvaluateIndividual = (
-    id: string, 
-    scores: any, 
-    rating: any, 
-    evaluator: string, 
-    designation: string, 
-    date: string
-  ) => {
-    updateDb(prev => ({
-      ...prev,
-      individualPre: prev.individualPre.map(p => p.id === id ? {
-        ...p,
-        isEvaluated: true,
-        evaluationScores: scores,
-        evaluationHODRating: rating,
-        evaluatedByName: evaluator,
-        evaluatedByDesignation: designation,
-        evaluatedByDate: date
-      } : p)
-    }));
-  };
-
-  const handleEvaluateDepartmental = (
-    id: string, 
-    scores: any, 
-    rating: any, 
-    evaluator: string, 
-    designation: string, 
-    date: string
-  ) => {
-    updateDb(prev => ({
-      ...prev,
-      departmentalPre: prev.departmentalPre.map(p => p.id === id ? {
-        ...p,
-        isEvaluated: true,
-        evaluationScores: scores,
-        evaluationHODRating: rating,
-        evaluatedByName: evaluator,
-        evaluatedByDesignation: designation,
-        evaluatedByDate: date
-      } : p)
-    }));
-  };
-
-  const handleUpdateSkill = (employeeCode: string, courseId: string, level: number) => {
-    updateDb(prev => {
-      const filtered = prev.skills.filter(s => !(s.employeeCode === employeeCode && s.courseId === courseId));
-      return {
+  const handleAddCourse = async (course: Course) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'courses', course.id), course);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `courses/${course.id}`);
+      }
+    } else {
+      updateDb(prev => ({
         ...prev,
-        skills: [...filtered, { employeeCode, courseId, level }]
-      };
-    });
+        courses: [...prev.courses, course]
+      }));
+    }
   };
 
-  const handleAddEvent = (evt: TrainingEvent) => {
-    updateDb(prev => ({
-      ...prev,
-      events: [evt, ...prev.events]
-    }));
+  const handleAddIndividualPre = async (tna: IndividualPreAssessment) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'individualPre', tna.id), tna);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `individualPre/${tna.id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        individualPre: [tna, ...prev.individualPre]
+      }));
+    }
   };
 
-  const handleUpdateEventStatus = (id: string, status: 'Scheduled' | 'Completed' | 'Cancelled') => {
-    updateDb(prev => ({
-      ...prev,
-      events: prev.events.map(e => e.id === id ? { ...e, status } : e)
-    }));
+  const handleAddDepartmentalPre = async (tna: DepartmentalPreAssessment) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'departmentalPre', tna.id), tna);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `departmentalPre/${tna.id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        departmentalPre: [tna, ...prev.departmentalPre]
+      }));
+    }
   };
 
-  const handleNominateTrainee = (eventId: string, employeeCode: string) => {
-    updateDb(prev => ({
-      ...prev,
-      events: prev.events.map(e => e.id === eventId ? {
-        ...e,
-        attendees: [...e.attendees, { employeeCode, reportingTime: '', present: false, signature: '' }]
-      } : e)
-    }));
+  const handleEvaluateIndividual = async (
+    id: string, 
+    scores: any, 
+    rating: any, 
+    evaluator: string, 
+    designation: string, 
+    date: string
+  ) => {
+    if (user) {
+      try {
+        const item = db.individualPre.find(p => p.id === id);
+        if (item) {
+          const updated = {
+            ...item,
+            isEvaluated: true,
+            evaluationScores: scores,
+            evaluationHODRating: rating,
+            evaluatedByName: evaluator,
+            evaluatedByDesignation: designation,
+            evaluatedByDate: date
+          };
+          await setDoc(doc(firestoreDb, 'individualPre', id), updated);
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `individualPre/${id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        individualPre: prev.individualPre.map(p => p.id === id ? {
+          ...p,
+          isEvaluated: true,
+          evaluationScores: scores,
+          evaluationHODRating: rating,
+          evaluatedByName: evaluator,
+          evaluatedByDesignation: designation,
+          evaluatedByDate: date
+        } : p)
+      }));
+    }
   };
 
-  const handleRemoveNomination = (eventId: string, employeeCode: string) => {
-    updateDb(prev => ({
-      ...prev,
-      events: prev.events.map(e => e.id === eventId ? {
-        ...e,
-        attendees: e.attendees.filter(a => a.employeeCode !== employeeCode)
-      } : e)
-    }));
+  const handleEvaluateDepartmental = async (
+    id: string, 
+    scores: any, 
+    rating: any, 
+    evaluator: string, 
+    designation: string, 
+    date: string
+  ) => {
+    if (user) {
+      try {
+        const item = db.departmentalPre.find(p => p.id === id);
+        if (item) {
+          const updated = {
+            ...item,
+            isEvaluated: true,
+            evaluationScores: scores,
+            evaluationHODRating: rating,
+            evaluatedByName: evaluator,
+            evaluatedByDesignation: designation,
+            evaluatedByDate: date
+          };
+          await setDoc(doc(firestoreDb, 'departmentalPre', id), updated);
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `departmentalPre/${id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        departmentalPre: prev.departmentalPre.map(p => p.id === id ? {
+          ...p,
+          isEvaluated: true,
+          evaluationScores: scores,
+          evaluationHODRating: rating,
+          evaluatedByName: evaluator,
+          evaluatedByDesignation: designation,
+          evaluatedByDate: date
+        } : p)
+      }));
+    }
   };
 
-  const handleSaveAttendance = (
+  const handleUpdateSkill = async (employeeCode: string, courseId: string, level: number) => {
+    if (user) {
+      try {
+        const skillId = `${employeeCode}_${courseId}`;
+         await setDoc(doc(firestoreDb, 'skills', skillId), { employeeCode, courseId, level });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `skills/${employeeCode}_${courseId}`);
+      }
+    } else {
+      updateDb(prev => {
+        const filtered = prev.skills.filter(s => !(s.employeeCode === employeeCode && s.courseId === courseId));
+        return {
+          ...prev,
+          skills: [...filtered, { employeeCode, courseId, level }]
+        };
+      });
+    }
+  };
+
+  const handleAddEvent = async (evt: TrainingEvent) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'events', evt.id), evt);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `events/${evt.id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        events: [evt, ...prev.events]
+      }));
+    }
+  };
+
+  const handleUpdateEventStatus = async (id: string, status: 'Scheduled' | 'Completed' | 'Cancelled') => {
+    if (user) {
+      try {
+        const item = db.events.find(e => e.id === id);
+        if (item) {
+          await setDoc(doc(firestoreDb, 'events', id), { ...item, status });
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `events/${id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        events: prev.events.map(e => e.id === id ? { ...e, status } : e)
+      }));
+    }
+  };
+
+  const handleNominateTrainee = async (eventId: string, employeeCode: string) => {
+    if (user) {
+      try {
+        const item = db.events.find(e => e.id === eventId);
+        if (item) {
+          const updated = {
+            ...item,
+            attendees: [...item.attendees, { employeeCode, reportingTime: '', present: false, signature: '' }]
+          };
+          await setDoc(doc(firestoreDb, 'events', eventId), updated);
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `events/${eventId}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        events: prev.events.map(e => e.id === eventId ? {
+          ...e,
+          attendees: [...e.attendees, { employeeCode, reportingTime: '', present: false, signature: '' }]
+        } : e)
+      }));
+    }
+  };
+
+  const handleRemoveNomination = async (eventId: string, employeeCode: string) => {
+    if (user) {
+      try {
+        const item = db.events.find(e => e.id === eventId);
+        if (item) {
+          const updated = {
+            ...item,
+            attendees: item.attendees.filter(a => a.employeeCode !== employeeCode)
+          };
+          await setDoc(doc(firestoreDb, 'events', eventId), updated);
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `events/${eventId}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        events: prev.events.map(e => e.id === eventId ? {
+          ...e,
+          attendees: e.attendees.filter(a => a.employeeCode !== employeeCode)
+        } : e)
+      }));
+    }
+  };
+
+  const handleSaveAttendance = async (
     eventId: string, 
     attendeeUpdates: { employeeCode: string; reportingTime: string; present: boolean; signature: string }[],
     trainerSig: string,
     hodSig: string,
     gmSig: string
   ) => {
-    updateDb(prev => ({
-      ...prev,
-      events: prev.events.map(e => e.id === eventId ? {
-        ...e,
-        status: 'Completed',
-        attendees: attendeeUpdates,
-        trainerSignature: trainerSig,
-        hodSignature: hodSig,
-        gmSignature: gmSig
-      } : e)
-    }));
-  };
-
-  const handleAddFeedback = (fb: PostAssessmentFeedback) => {
-    updateDb(prev => ({
-      ...prev,
-      feedbacks: [fb, ...prev.feedbacks]
-    }));
-  };
-
-  const handleSaveMarks = (eventId: string, marks: { employeeCode: string; obtainedMarks: number; totalMarks: number }[]) => {
-    updateDb(prev => {
-      const filtered = prev.postMarks.filter(m => m.trainingEventId !== eventId);
-      const newMarks = marks.map((m, i) => ({
-        id: `M-${eventId}-${i}-${Date.now().toString().slice(-3)}`,
-        trainingEventId: eventId,
-        employeeCode: m.employeeCode,
-        obtainedMarks: m.obtainedMarks,
-        totalMarks: m.totalMarks
-      }));
-
-      return {
+    if (user) {
+      try {
+        const item = db.events.find(e => e.id === eventId);
+        if (item) {
+          const updated = {
+            ...item,
+            status: 'Completed' as const,
+            attendees: attendeeUpdates,
+            trainerSignature: trainerSig,
+            hodSignature: hodSig,
+            gmSignature: gmSig
+          };
+          await setDoc(doc(firestoreDb, 'events', eventId), updated);
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `events/${eventId}`);
+      }
+    } else {
+      updateDb(prev => ({
         ...prev,
-        postMarks: [...filtered, ...newMarks]
-      };
-    });
+        events: prev.events.map(e => e.id === eventId ? {
+          ...e,
+          status: 'Completed',
+          attendees: attendeeUpdates,
+          trainerSignature: trainerSig,
+          hodSignature: hodSig,
+          gmSignature: gmSig
+        } : e)
+      }));
+    }
   };
 
-  const handleResetData = () => {
+  const handleAddFeedback = async (fb: PostAssessmentFeedback) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'feedbacks', fb.id), fb);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `feedbacks/${fb.id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        feedbacks: [fb, ...prev.feedbacks]
+      }));
+    }
+  };
+
+  const handleSaveMarks = async (eventId: string, marks: { employeeCode: string; obtainedMarks: number; totalMarks: number }[]) => {
+    if (user) {
+      try {
+        const newMarks = marks.map((m, i) => ({
+          id: `M-${eventId}-${i}-${Date.now().toString().slice(-3)}`,
+          trainingEventId: eventId,
+          employeeCode: m.employeeCode,
+          obtainedMarks: m.obtainedMarks,
+          totalMarks: m.totalMarks
+        }));
+        
+        for (const nm of newMarks) {
+          await setDoc(doc(firestoreDb, 'postMarks', nm.id), nm);
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `postMarks`);
+      }
+    } else {
+      updateDb(prev => {
+        const filtered = prev.postMarks.filter(m => m.trainingEventId !== eventId);
+        const newMarks = marks.map((m, i) => ({
+          id: `M-${eventId}-${i}-${Date.now().toString().slice(-3)}`,
+          trainingEventId: eventId,
+          employeeCode: m.employeeCode,
+          obtainedMarks: m.obtainedMarks,
+          totalMarks: m.totalMarks
+        }));
+
+        return {
+          ...prev,
+          postMarks: [...filtered, ...newMarks]
+        };
+      });
+    }
+  };
+
+  const handleResetData = async () => {
     if (confirm("Are you sure you want to reset all data back to preloaded AGI Denim default schedules and values? All your modifications will be erased.")) {
-      const defaultDb = {
-        courses: INITIAL_COURSES,
-        employees: INITIAL_EMPLOYEES,
-        events: INITIAL_EVENTS,
-        skills: INITIAL_SKILLS,
-        individualPre: INITIAL_INDIVIDUAL_PRE_ASSESSMENTS,
-        departmentalPre: INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS,
-        feedbacks: INITIAL_FEEDBACKS,
-        postMarks: INITIAL_POST_MARKS,
-      };
-      setDb(defaultDb);
-      saveLMSData(defaultDb);
+      if (user) {
+        setIsSyncing(true);
+        try {
+          const deleteCollection = async (colName: string) => {
+            const snap = await getDocs(collection(firestoreDb, colName));
+            for (const d of snap.docs) {
+              await deleteDoc(doc(firestoreDb, colName, d.id));
+            }
+          };
+          
+          await deleteCollection('courses');
+          await deleteCollection('employees');
+          await deleteCollection('events');
+          await deleteCollection('skills');
+          await deleteCollection('individualPre');
+          await deleteCollection('departmentalPre');
+          await deleteCollection('feedbacks');
+          await deleteCollection('postMarks');
+
+          // Seed baseline initial defaults
+          for (const course of INITIAL_COURSES) {
+            await setDoc(doc(firestoreDb, 'courses', course.id), course);
+          }
+          for (const emp of INITIAL_EMPLOYEES) {
+            await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
+          }
+          for (const ev of INITIAL_EVENTS) {
+            await setDoc(doc(firestoreDb, 'events', ev.id), ev);
+          }
+          for (const sk of INITIAL_SKILLS) {
+            const skillId = `${sk.employeeCode}_${sk.courseId}`;
+            await setDoc(doc(firestoreDb, 'skills', skillId), sk);
+          }
+          for (const ind of INITIAL_INDIVIDUAL_PRE_ASSESSMENTS) {
+            await setDoc(doc(firestoreDb, 'individualPre', ind.id), ind);
+          }
+          for (const dept of INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS) {
+            await setDoc(doc(firestoreDb, 'departmentalPre', dept.id), dept);
+          }
+          for (const fb of INITIAL_FEEDBACKS) {
+            await setDoc(doc(firestoreDb, 'feedbacks', fb.id), fb);
+          }
+          for (const pm of INITIAL_POST_MARKS) {
+            await setDoc(doc(firestoreDb, 'postMarks', pm.id), pm);
+          }
+        } catch (err) {
+          console.error("Error resetting Firestore database:", err);
+          alert("Failed to reset Firestore database.");
+        } finally {
+          setIsSyncing(false);
+        }
+      } else {
+        const defaultDb = {
+          courses: INITIAL_COURSES,
+          employees: INITIAL_EMPLOYEES,
+          events: INITIAL_EVENTS,
+          skills: INITIAL_SKILLS,
+          individualPre: INITIAL_INDIVIDUAL_PRE_ASSESSMENTS,
+          departmentalPre: INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS,
+          feedbacks: INITIAL_FEEDBACKS,
+          postMarks: INITIAL_POST_MARKS,
+        };
+        setDb(defaultDb);
+        saveLMSData(defaultDb);
+      }
     }
   };
 
@@ -495,15 +809,43 @@ export default function App() {
 
         {/* User profile Section at bottom of sidebar */}
         <div className="p-4 border-t border-slate-900 bg-slate-1000/40">
-          <div className="bg-slate-900 hover:bg-slate-855 rounded-2xl p-3 flex items-center gap-3 transition-colors border border-slate-800/30">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-extrabold text-xs shrink-0 shadow-sm shadow-blue-900/30">
-              SM
+          {user ? (
+            <div className="bg-slate-900 rounded-2xl p-3 flex flex-col gap-2 border border-slate-800/30">
+              <div className="flex items-center gap-3">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt={user.displayName || "User"} className="w-8 h-8 rounded-full object-cover shrink-0 border border-blue-500/50" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-extrabold text-xs shrink-0 shadow-sm shadow-blue-900/30">
+                    {user.displayName?.slice(0, 2).toUpperCase() || "US"}
+                  </div>
+                )}
+                <div className="overflow-hidden flex-1">
+                  <p className="text-xs text-slate-100 font-bold truncate">{user.displayName || "L&D User"}</p>
+                  <p className="text-[10px] text-emerald-400 font-medium truncate flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse block shrink-0" />
+                    <span>Firebase Synced</span>
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => logoutUser()}
+                className="w-full text-center text-[10px] text-slate-400 font-bold tracking-wider hover:text-white bg-slate-850 hover:bg-slate-800 py-1 rounded-lg transition-colors cursor-pointer border border-slate-800"
+              >
+                Sign Out
+              </button>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-xs text-slate-100 font-bold truncate">Sajid Mahmood</p>
-              <p className="text-[10px] text-slate-400 font-medium truncate">HOD QA Group</p>
+          ) : (
+            <div className="bg-slate-900 hover:bg-slate-855 rounded-2xl p-3 flex flex-col gap-2 border border-slate-800/30">
+              <p className="text-[10px] text-slate-400 font-bold text-center leading-normal">Operational records are stored locally.</p>
+              <button 
+                onClick={() => loginWithGoogle()}
+                className="w-full text-center text-xs text-white font-black bg-blue-600 hover:bg-blue-700 py-1.5 px-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-blue-900/20"
+              >
+                <span>🌐</span>
+                <span>Connect Firebase</span>
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </aside>
 
@@ -518,6 +860,11 @@ export default function App() {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-550">
               <span className="text-blue-600">UNIT 01: QA & AUDITS</span>
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              {isSyncing && (
+                <span className="text-[10px] text-blue-500 font-mono animate-pulse ml-2 flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Synchronizing Firestore...
+                </span>
+              )}
             </div>
           </div>
 
