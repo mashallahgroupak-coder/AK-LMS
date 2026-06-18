@@ -731,6 +731,298 @@ export default function App() {
     }
   };
 
+  const hashCode = (str: string): string => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+  };
+
+  const parseRawCSVDate = (dateStr: string): string => {
+    if (!dateStr) return new Date().toISOString().split('T')[0];
+    const str = dateStr.trim().replace(/^"|"$/g, '');
+    const parts = str.split(/[\s,]+/).filter(Boolean);
+    
+    let year = 2026;
+    let month = 3; // April
+    let day = 15;
+    
+    const monthMap: Record<string, number> = {
+      jan: 0, january: 0, february: 1, feb: 1, march: 2, mar: 2, april: 3, apr: 3,
+      may: 4, june: 5, jun: 5, july: 6, jul: 6, august: 7, aug: 7, september: 8, sep: 8, sept: 8,
+      october: 9, oct: 9, november: 10, nov: 10, december: 11, dec: 11
+    };
+    
+    for (const part of parts) {
+      const valLow = part.toLowerCase();
+      if (monthMap[valLow] !== undefined) {
+        month = monthMap[valLow];
+      } else if (/^\d{4}$/.test(part)) {
+        year = parseInt(part, 10);
+      } else if (/^\d{1,2}$/.test(part)) {
+        day = parseInt(part, 10);
+      }
+    }
+    
+    const mStr = String(month + 1).padStart(2, '0');
+    const dStr = String(day).padStart(2, '0');
+    return `${year}-${mStr}-${dStr}`;
+  };
+
+  const handleImportMasterAttendance = async (csvText: string) => {
+    if (!csvText || !csvText.trim()) {
+      alert("No data provided.");
+      return;
+    }
+
+    const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const parseCSVLine = (line: string): string[] => {
+      const result: string[] = [];
+      let currentVal = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(currentVal.trim());
+          currentVal = '';
+        } else {
+          currentVal += char;
+        }
+      }
+      result.push(currentVal.trim());
+      return result;
+    };
+
+    const headerLine = lines[0];
+    if (!headerLine.toLowerCase().includes("training topic") && !headerLine.toLowerCase().includes("employee")) {
+      alert("Invalid format. Make sure columns match AGI Sheet (S#, EMPLOYEE ID, EMPLOYEE NAME, DESIGNATION, DEPARTMENT, SECTION / VENUE, DATE, TRAINING TOPIC, DURATION...)");
+      return;
+    }
+
+    interface PendingRow {
+      empId: string;
+      empName: string;
+      desg: string;
+      dept: string;
+      venue: string;
+      parsedDate: string;
+      rawTopic: string;
+      durationMins: number;
+      durationHrs: number;
+      isInternal: boolean;
+      score?: number;
+    }
+
+    const rows: PendingRow[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.toLowerCase().includes("employee name") || line.toLowerCase().includes("s#")) continue;
+      const parts = parseCSVLine(line);
+      if (parts.length < 8) continue;
+
+      let empId = parts[1] || '';
+      const empName = parts[2] || '';
+      const desg = parts[3] || '';
+      const dept = parts[4] || '';
+      const venue = parts[5] || '';
+      const rawDate = parts[6] || '';
+      const rawTopic = parts[7] || '';
+      const durationMinsStr = parts[8] || '45';
+      const durationHrsStr = parts[9] || '0.75';
+      const intExtStr = parts[11] || 'Internal';
+      const scoreStr = parts[12] || '';
+
+      if (!empName && !rawTopic) continue;
+
+      const durationMins = parseInt(durationMinsStr.replace(/[^\d]/g, ''), 10) || 45;
+      const durationHrs = parseFloat(durationHrsStr) || 0.75;
+      const isInternal = !intExtStr.toLowerCase().includes("external");
+      const score = scoreStr.trim() ? parseInt(scoreStr.replace(/[^\d]/g, ''), 10) : undefined;
+      const parsedDate = parseRawCSVDate(rawDate);
+
+      if (!empId.trim()) {
+        empId = `AGI-TEMP-${hashCode(empName)}`;
+      }
+
+      rows.push({
+        empId: empId.trim(),
+        empName: empName.trim(),
+        desg: desg.trim(),
+        dept: dept.trim(),
+        venue: venue.trim(),
+        parsedDate,
+        rawTopic: rawTopic.trim().replace(/^"|"$/g, ''),
+        durationMins,
+        durationHrs,
+        isInternal,
+        score
+      });
+    }
+
+    const courseMap = new Map<string, Course>();
+    const employeeMap = new Map<string, Employee>();
+    const sessionMap = new Map<string, {
+      id: string;
+      courseId: string;
+      date: string;
+      venue: string;
+      dept: string;
+      durationMins: number;
+      attendeeRows: PendingRow[];
+    }>();
+
+    for (const r of rows) {
+      if (!employeeMap.has(r.empId)) {
+        employeeMap.set(r.empId, {
+          code: r.empId,
+          name: r.empName,
+          email: `${r.empId.toLowerCase().replace(/[^a-z0-9]/g, '')}@agidenim.at`,
+          designation: r.desg,
+          department: r.dept || 'Production Department',
+          unit: 'Unit 1',
+          hodName: `HOD - ${r.dept || 'Production'}`,
+          hodEmail: `hod.${(r.dept || 'Production').toLowerCase().replace(/[^a-z]/g, '')}@agidenim.at`
+        });
+      }
+
+      const courseId = `CRS-${hashCode(r.rawTopic)}`;
+      if (!courseMap.has(courseId)) {
+        const tLow = r.rawTopic.toLowerCase();
+        let scope: 'Professional/Technical' | 'Systems/Sustainability' | 'Social Compliance' | 'Other' = 'Professional/Technical';
+        if (tLow.includes("safety") || tLow.includes("hazard") || tLow.includes("waste") || tLow.includes("etp") || tLow.includes("boiler") || tLow.includes("heat") || tLow.includes("risk") || tLow.includes("electrical")) {
+          scope = 'Systems/Sustainability';
+        } else if (tLow.includes("compliance") || tLow.includes("ethics") || tLow.includes("rights") || tLow.includes("discipline") || tLow.includes("ibad") || tLow.includes("ethics (coc)")) {
+          scope = 'Social Compliance';
+        } else if (tLow.includes("management") || tLow.includes("goal") || tLow.includes("soft") || tLow.includes("balance") || tLow.includes("intelligence") || tLow.includes("mind") || tLow.includes("culture")) {
+          scope = 'Other';
+        }
+
+        courseMap.set(courseId, {
+          id: courseId,
+          name: r.rawTopic,
+          trainer: r.isInternal ? 'Internal Subject Expert' : 'External Consultant',
+          department: r.dept || 'General Plant',
+          frequency: 'Annually',
+          topics: [r.rawTopic],
+          scope,
+          method: 'Lecture/Presentation',
+          durationHours: r.durationHrs,
+          durationMinutes: r.durationMins
+        });
+      }
+
+      const sessionId = `${r.parsedDate}_${courseId}_${hashCode(r.venue)}`;
+      if (!sessionMap.has(sessionId)) {
+        sessionMap.set(sessionId, {
+          id: `EV-${sessionId.replace(/[^a-zA-Z0-9]/g, '-')}`,
+          courseId,
+          date: r.parsedDate,
+          venue: r.venue,
+          dept: r.dept,
+          durationMins: r.durationMins,
+          attendeeRows: []
+        });
+      }
+      sessionMap.get(sessionId)!.attendeeRows.push(r);
+    }
+
+    const employeesToSave = Array.from(employeeMap.values());
+    const coursesToSave = Array.from(courseMap.values());
+    const eventsToSave: TrainingEvent[] = [];
+    const postMarksToSave: PostAssessmentMark[] = [];
+
+    for (const s of sessionMap.values()) {
+      const attendees = s.attendeeRows.map(att => ({
+        employeeCode: att.empId,
+        reportingTime: "09:00",
+        present: true,
+        signature: "Signed"
+      }));
+
+      eventsToSave.push({
+        id: s.id,
+        courseId: s.courseId,
+        date: s.date,
+        time: "09:00",
+        trgRef: `TRG-${hashCode(s.id).slice(0, 4).toUpperCase()}`,
+        sheetNo: `SH-${hashCode(s.id).slice(0, 4).toUpperCase()}`,
+        isTNA: false,
+        isRefresher: false,
+        status: 'Completed',
+        attendees,
+        trainerSignature: "Signed",
+        hodSignature: "Signed",
+        gmSignature: "Signed"
+      });
+
+      for (const att of s.attendeeRows) {
+        if (att.score !== undefined) {
+          postMarksToSave.push({
+            id: `MK-${hashCode(s.id + att.empId)}`,
+            trainingEventId: s.id,
+            employeeCode: att.empId,
+            obtainedMarks: att.score,
+            totalMarks: 100
+          });
+        }
+      }
+    }
+
+    if (user) {
+      setIsSyncing(true);
+      try {
+        for (const emp of employeesToSave) {
+          await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
+        }
+        for (const crs of coursesToSave) {
+          await setDoc(doc(firestoreDb, 'courses', crs.id), crs);
+        }
+        for (const ev of eventsToSave) {
+          await setDoc(doc(firestoreDb, 'events', ev.id), ev);
+        }
+        for (const m of postMarksToSave) {
+          await setDoc(doc(firestoreDb, 'postMarks', m.id), m);
+        }
+        alert(`Successfully imported into Cloud DB!\n✔️ Registered employees: ${employeesToSave.length}\n✔️ Training Courses added: ${coursesToSave.length}\n✔️ Calendar events scheduled: ${eventsToSave.length}\n✔️ Post-Assessment scores updated: ${postMarksToSave.length}`);
+      } catch (err) {
+        console.error("Firestore master import error:", err);
+        alert("Firestore save failed.");
+      } finally {
+        setIsSyncing(false);
+      }
+    } else {
+      updateDb(prev => {
+        const existingEmpCodes = new Set(prev.employees.map(e => e.code));
+        const mergedEmps = [...prev.employees, ...employeesToSave.filter(e => !existingEmpCodes.has(e.code))];
+
+        const existingCrsIds = new Set(prev.courses.map(c => c.id));
+        const mergedCrs = [...prev.courses, ...coursesToSave.filter(c => !existingCrsIds.has(c.id))];
+
+        const existingEvIds = new Set(prev.events.map(ev => ev.id));
+        const mergedEvents = [...prev.events, ...eventsToSave.filter(ev => !existingEvIds.has(ev.id))];
+
+        const existingMarkIds = new Set(prev.postMarks.map(m => m.id));
+        const mergedMarks = [...prev.postMarks, ...postMarksToSave.filter(m => !existingMarkIds.has(m.id))];
+
+        const nextDb = {
+          ...prev,
+          employees: mergedEmps,
+          courses: mergedCrs,
+          events: mergedEvents,
+          postMarks: mergedMarks
+        };
+
+        saveLMSData(nextDb);
+        alert(`Successfully imported into Local DB!\n✔️ Registered employees: ${employeesToSave.length}\n✔️ Training Courses added: ${coursesToSave.length}\n✔️ Calendar events scheduled: ${eventsToSave.length}\n✔️ Post-Assessment scores updated: ${postMarksToSave.length}`);
+        return nextDb;
+      });
+    }
+  };
+
   const handleImportCourses = async (newCourses: Course[]) => {
     if (user) {
       setIsSyncing(true);
@@ -880,6 +1172,7 @@ export default function App() {
                     onAddEmployee={handleAddEmployee}
                     onImportEmployees={handleImportEmployees}
                     onImportCourses={handleImportCourses}
+                    onImportMasterAttendance={handleImportMasterAttendance}
                     onClearData={handleClearData}
                     onResetData={handleResetData}
                     onDeleteEmployee={handleDeleteEmployee}

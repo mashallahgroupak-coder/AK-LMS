@@ -20,6 +20,7 @@ interface OverviewProps {
   onAddEmployee: (emp: Employee) => void;
   onImportEmployees: (emps: Employee[]) => void;
   onImportCourses: (courses: Course[]) => void;
+  onImportMasterAttendance: (csvText: string) => Promise<void>;
   onClearData: () => void;
   onResetData: () => void;
   onDeleteEmployee: (code: string) => void;
@@ -74,13 +75,14 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
   onAddEmployee,
   onImportEmployees,
   onImportCourses,
+  onImportMasterAttendance,
   onClearData,
   onResetData,
   onDeleteEmployee
 }) => {
   // Administrative Roster and Custom Seeding UI State
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminTab, setAdminTab] = useState<'employees_bulk' | 'courses_bulk' | 'employees_manual' | 'reset'>('employees_bulk');
+  const [adminTab, setAdminTab] = useState<'employees_bulk' | 'courses_bulk' | 'master_attendance_bulk' | 'employees_manual' | 'reset'>('master_attendance_bulk');
 
   // Employee manual add form state
   const [newEmpCode, setNewEmpCode] = useState('');
@@ -95,10 +97,13 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
   // CSV file paste inputs
   const [csvEmployeesText, setCsvEmployeesText] = useState('');
   const [csvCoursesText, setCsvCoursesText] = useState('');
+  const [csvMasterText, setCsvMasterText] = useState('');
 
   // Drag and drop states
   const [isDraggingEmp, setIsDraggingEmp] = useState(false);
   const [isDraggingCrs, setIsDraggingCrs] = useState(false);
+  const [isDraggingMaster, setIsDraggingMaster] = useState(false);
+  const [isImportingMaster, setIsImportingMaster] = useState(false);
 
   const handleCSVEmployeeSubmit = () => {
     if (!csvEmployeesText.trim()) {
@@ -148,7 +153,7 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
       onImportEmployees(parsedEmployees);
       setCsvEmployeesText('');
     } catch (e) {
-      alert("Error parsing CSV: " + (e as Error).length);
+      alert("Error parsing CSV: " + (e as Error).message);
     }
   };
 
@@ -247,10 +252,11 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
     alert(`Added employee ${newEmpName.trim()} successfully!`);
   };
 
-  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>, type: 'emp' | 'crs') => {
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>, type: 'emp' | 'crs' | 'master') => {
     e.preventDefault();
     if (type === 'emp') setIsDraggingEmp(false);
-    else setIsDraggingCrs(false);
+    else if (type === 'crs') setIsDraggingCrs(false);
+    else setIsDraggingMaster(false);
 
     const file = e.dataTransfer.files[0];
     if (file) {
@@ -259,10 +265,27 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
         const text = event.target?.result as string;
         if (text) {
           if (type === 'emp') setCsvEmployeesText(text);
-          else setCsvCoursesText(text);
+          else if (type === 'crs') setCsvCoursesText(text);
+          else setCsvMasterText(text);
         }
       };
       reader.readAsText(file);
+    }
+  };
+
+  const handleCSVMasterSubmit = async () => {
+    if (!csvMasterText.trim()) {
+      alert("Please paste some training master CSV text first or drag and drop a file!");
+      return;
+    }
+    setIsImportingMaster(true);
+    try {
+      await onImportMasterAttendance(csvMasterText);
+      setCsvMasterText('');
+    } catch (e) {
+      alert("Import error: " + (e as Error).message);
+    } finally {
+      setIsImportingMaster(false);
     }
   };
 
@@ -746,6 +769,16 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
             {/* Tab selector */}
             <div className="flex flex-wrap border-b border-slate-200 gap-1">
               <button
+                onClick={() => setAdminTab('master_attendance_bulk')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-tight border-b-2 transition-all cursor-pointer ${
+                  adminTab === 'master_attendance_bulk' 
+                    ? 'border-slate-900 text-slate-900 bg-slate-50 font-black' 
+                    : 'border-transparent text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                🔥 Bulk Master Attendance (CSV)
+              </button>
+              <button
                 onClick={() => setAdminTab('employees_bulk')}
                 className={`px-4 py-2 text-xs font-bold uppercase tracking-tight border-b-2 transition-all cursor-pointer ${
                   adminTab === 'employees_bulk' 
@@ -786,6 +819,85 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
                 🚨 Danger Zone / System Reset
               </button>
             </div>
+
+            {/* Tab Contents: Master Attendance Bulk */}
+            {adminTab === 'master_attendance_bulk' && (
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-5 rounded-xl text-xs space-y-3 shadow-md">
+                  <div className="flex items-center space-x-2 text-sky-400 font-extrabold text-sm uppercase tracking-wider">
+                    <Sparkles className="w-5 h-5 animate-spin" />
+                    <span>AGI Denim Training Master Loader & Attendance Compiler</span>
+                  </div>
+                  <p className="text-slate-200 leading-relaxed">
+                    Paste the entire raw excel/spreadsheet attendance report rows below (including S#, Employee ID, Employee Name, Designation, Department, Section / Venue, Date, Training Topic, Duration etc.). 
+                  </p>
+                  <p className="text-slate-300">
+                    The compiler will automatically:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 font-mono text-[10px] text-sky-300">
+                    <div className="bg-slate-950/50 p-2.5 rounded border border-slate-800">
+                      ✔️ Parse and Register all <strong>Employees</strong> (mapping departments, HODs, & grades)
+                    </div>
+                    <div className="bg-slate-950/50 p-2.5 rounded border border-slate-800">
+                      ✔️ Build/deduplicate all <strong>Training Courses</strong> & calculate duration parameters
+                    </div>
+                    <div className="bg-slate-950/50 p-2.5 rounded border border-slate-800">
+                      ✔️ Structure <strong>Completed Training Sessions</strong> by combined Date + Topic + Venue
+                    </div>
+                    <div className="bg-slate-950/50 p-2.5 rounded border border-slate-800">
+                      ✔️ Generate all corresponding <strong>Post-Assessment Marks</strong> & pass/fail lists
+                    </div>
+                  </div>
+                </div>
+
+                <div 
+                  onDragOver={e => { e.preventDefault(); setIsDraggingMaster(true); }}
+                  onDragLeave={() => setIsDraggingMaster(false)}
+                  onDrop={e => handleFileDrop(e, 'master')}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+                    isDraggingMaster ? 'border-sky-400 bg-sky-900/10 scale-[0.99]' : 'border-slate-300 hover:border-slate-400 bg-slate-50/10'
+                  }`}
+                >
+                  <Upload className="w-10 h-10 text-slate-400 mx-auto mb-2 animate-bounce" />
+                  <p className="text-xs font-bold text-slate-800">Drag & Drop Master Attendance CSV file here</p>
+                  <p className="text-[10.5px] text-slate-500 mt-1">Or paste the tabular content into the text area below</p>
+                </div>
+
+                <div className="space-y-1.5Pen">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>📋 Raw Master CSV Data Input Panel:</span>
+                  </label>
+                  <textarea
+                    rows={10}
+                    value={csvMasterText}
+                    onChange={e => setCsvMasterText(e.target.value)}
+                    placeholder="S#,EMPLOYEE ID,EMPLOYEE NAME,DESIGNATION,DEPARTMENT,SECTION / VENUE,DATE,TRAINING TOPIC,DURATION (MINS),TRAINING HOURS,MAN HOURS,TRAINING (INT/EXT),ASSESSMENT SCORE..."
+                    className="w-full font-mono text-[11px] p-4 bg-slate-950 text-emerald-400 border border-slate-800 rounded-xl focus:ring-1 focus:ring-slate-400 outline-none leading-relaxed shadow-inner"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-1">
+                  <button
+                    onClick={() => setCsvMasterText('')}
+                    className="px-4 py-2 hover:bg-slate-50 font-bold text-xs text-slate-700 border border-slate-200 rounded-xl transition cursor-pointer"
+                  >
+                    Clear Input
+                  </button>
+                  <button
+                    onClick={handleCSVMasterSubmit}
+                    disabled={isImportingMaster}
+                    className="px-6 py-2 bg-slate-900 text-white hover:bg-slate-800 font-extrabold text-xs rounded-xl flex items-center gap-2 cursor-pointer shadow transition-all disabled:opacity-50"
+                  >
+                    {isImportingMaster ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Database className="w-3.5 h-3.5 text-sky-400" />
+                    )}
+                    <span>Compile & Populate Master Training Sheets</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Tab Contents: Employees Bulk */}
             {adminTab === 'employees_bulk' && (
