@@ -34,53 +34,47 @@ export default function App() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+
+      // Force empty slate for local storage on first load after the code change
+      if (!localStorage.getItem('agi_lms_force_slate_v3_local')) {
+        localStorage.clear();
+        localStorage.setItem('agi_lms_force_slate_v3_local', 'true');
+        setDb({
+          courses: [],
+          employees: [],
+          events: [],
+          skills: [],
+          individualPre: [],
+          departmentalPre: [],
+          feedbacks: [],
+          postMarks: [],
+          questions: []
+        });
+      }
+
       if (currentUser) {
         setIsSyncing(true);
         try {
-          const configSnap = await getDocs(collection(firestoreDb, 'config'));
-          if (configSnap.empty) {
-            const coursesSnap = await getDocs(collection(firestoreDb, 'courses'));
-            if (coursesSnap.empty) {
-              // Seed default values to Firestore for immediate sandbox preview because database is completely uninitialized
-              for (const course of INITIAL_COURSES) {
-                await setDoc(doc(firestoreDb, 'courses', course.id), course);
-              }
-              for (const emp of INITIAL_EMPLOYEES) {
-                await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
-              }
-              for (const ev of INITIAL_EVENTS) {
-                await setDoc(doc(firestoreDb, 'events', ev.id), ev);
-              }
-              for (const sk of INITIAL_SKILLS) {
-                const skillId = `${sk.employeeCode}_${sk.courseId}`;
-                await setDoc(doc(firestoreDb, 'skills', skillId), sk);
-              }
-              for (const ind of INITIAL_INDIVIDUAL_PRE_ASSESSMENTS) {
-                await setDoc(doc(firestoreDb, 'individualPre', ind.id), ind);
-              }
-              for (const dept of INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS) {
-                await setDoc(doc(firestoreDb, 'departmentalPre', dept.id), dept);
-              }
-              for (const fb of INITIAL_FEEDBACKS) {
-                await setDoc(doc(firestoreDb, 'feedbacks', fb.id), fb);
-              }
-              for (const pm of INITIAL_POST_MARKS) {
-                await setDoc(doc(firestoreDb, 'postMarks', pm.id), pm);
-              }
-              for (const q of INITIAL_QUESTIONS) {
-                await setDoc(doc(firestoreDb, 'questions', q.id), q);
-              }
-            } else {
-              // Guarantee questions collection exists if courses are there but questions empty
-              const questionsSnap = await getDocs(collection(firestoreDb, 'questions'));
-              if (questionsSnap.empty) {
-                for (const q of INITIAL_QUESTIONS) {
-                  await setDoc(doc(firestoreDb, 'questions', q.id), q);
-                }
+          // Force wipe of old Firestore collections once to guarantee perfect clean sheet
+          if (!localStorage.getItem('agi_lms_force_slate_v3_firestore')) {
+            const collectionsToWipe = [
+              'courses', 'employees', 'events', 'skills', 
+              'individualPre', 'departmentalPre', 'feedbacks', 
+              'postMarks', 'questions'
+            ];
+            for (const colName of collectionsToWipe) {
+              const snap = await getDocs(collection(firestoreDb, colName));
+              for (const d of snap.docs) {
+                await deleteDoc(doc(firestoreDb, colName, d.id));
               }
             }
-            // Mark system as initialized so it never auto-seeds again even if all collections are empty
-            await setDoc(doc(firestoreDb, 'config', 'status'), { initialized: true });
+            await setDoc(doc(firestoreDb, 'config', 'status'), { initialized: true, wiped: true });
+            localStorage.setItem('agi_lms_force_slate_v3_firestore', 'true');
+          } else {
+            const configSnap = await getDocs(collection(firestoreDb, 'config'));
+            if (configSnap.empty) {
+              await setDoc(doc(firestoreDb, 'config', 'status'), { initialized: true });
+            }
           }
         } catch (err) {
           handleFirestoreError(err, OperationType.GET, 'init-seed');
