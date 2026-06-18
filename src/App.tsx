@@ -19,7 +19,8 @@ import { auth, db as firestoreDb, handleFirestoreError, OperationType, loginWith
 
 import { 
   Building2, LayoutDashboard, FileCheck2, Grid, CalendarDays, BookOpenText, 
-  SendToBack, ClipboardList, BarChart4, ClipboardCheck, FileSpreadsheet, RefreshCw 
+  SendToBack, ClipboardList, BarChart4, ClipboardCheck, FileSpreadsheet, RefreshCw,
+  Trash2, Database
 } from 'lucide-react';
 
 export default function App() {
@@ -639,6 +640,165 @@ export default function App() {
     }
   };
 
+  const handleClearData = async () => {
+    if (confirm("🚨 DANGER WIPE: Are you sure you want to delete ALL courses, employees, calendars, skill matrices, evaluations, and post-grades? This will clear the database to zero for your custom data. This cannot be undone!")) {
+      if (user) {
+        setIsSyncing(true);
+        try {
+          const deleteCollection = async (colName: string) => {
+            const snap = await getDocs(collection(firestoreDb, colName));
+            for (const d of snap.docs) {
+              await deleteDoc(doc(firestoreDb, colName, d.id));
+            }
+          };
+          
+          await deleteCollection('courses');
+          await deleteCollection('employees');
+          await deleteCollection('events');
+          await deleteCollection('skills');
+          await deleteCollection('individualPre');
+          await deleteCollection('departmentalPre');
+          await deleteCollection('feedbacks');
+          await deleteCollection('postMarks');
+          await deleteCollection('questions');
+
+          const emptyDb = {
+            courses: [],
+            employees: [],
+            events: [],
+            skills: [],
+            individualPre: [],
+            departmentalPre: [],
+            feedbacks: [],
+            postMarks: [],
+            questions: []
+          };
+          setDb(emptyDb);
+          alert("All database collections successfully wiped! Zero-data slate generated.");
+        } catch (err) {
+          console.error("Error clearing database:", err);
+          alert("Database wipe failed.");
+        } finally {
+          setIsSyncing(false);
+        }
+      } else {
+        const emptyDb = {
+          courses: [],
+          employees: [],
+          events: [],
+          skills: [],
+          individualPre: [],
+          departmentalPre: [],
+          feedbacks: [],
+          postMarks: [],
+          questions: []
+        };
+        setDb(emptyDb);
+        saveLMSData(emptyDb);
+        alert("Local storage wiped successfully! Zero-data slate generated.");
+      }
+    }
+  };
+
+  const handleImportEmployees = async (newEmployees: Employee[]) => {
+    if (user) {
+      setIsSyncing(true);
+      try {
+        for (const emp of newEmployees) {
+          await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
+        }
+        alert(`Successfully uploaded ${newEmployees.length} employee records!`);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'employees-bulk-import');
+      } finally {
+        setIsSyncing(false);
+      }
+    } else {
+      updateDb(prev => {
+        const existingCodes = new Set(prev.employees.map(e => e.code));
+        const uniqueNew = newEmployees.filter(e => !existingCodes.has(e.code));
+        const merged = [...prev.employees, ...uniqueNew];
+        alert(`Successfully uploaded ${newEmployees.length} employee records offline!`);
+        return {
+          ...prev,
+          employees: merged
+        };
+      });
+    }
+  };
+
+  const handleImportCourses = async (newCourses: Course[]) => {
+    if (user) {
+      setIsSyncing(true);
+      try {
+        for (const crs of newCourses) {
+          await setDoc(doc(firestoreDb, 'courses', crs.id), crs);
+        }
+        alert(`Successfully uploaded ${newCourses.length} course records!`);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'courses-bulk-import');
+      } finally {
+        setIsSyncing(false);
+      }
+    } else {
+      updateDb(prev => {
+        const existingIds = new Set(prev.courses.map(c => c.id));
+        const uniqueNew = newCourses.filter(c => !existingIds.has(c.id));
+        const merged = [...prev.courses, ...uniqueNew];
+        alert(`Successfully uploaded ${newCourses.length} course records offline!`);
+        return {
+          ...prev,
+          courses: merged
+        };
+      });
+    }
+  };
+
+  const handleAddEmployee = async (emp: Employee) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `employees/${emp.code}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        employees: [...prev.employees, emp]
+      }));
+    }
+  };
+
+  const handleEditEmployee = async (emp: Employee) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `employees/${emp.code}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        employees: prev.employees.map(e => e.code === emp.code ? emp : e)
+      }));
+    }
+  };
+
+  const handleDeleteEmployee = async (code: string) => {
+    if (user) {
+      try {
+        await deleteDoc(doc(firestoreDb, 'employees', code));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `employees/${code}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        employees: prev.employees.filter(e => e.code !== code)
+      }));
+    }
+  };
+
   const tabs = [
     { id: 'overview', name: 'L&D Dashboard', icon: LayoutDashboard },
     { id: 'pre', name: 'Pre Assessment (TNA)', icon: FileCheck2 },
@@ -713,6 +873,12 @@ export default function App() {
                     postMarks={db.postMarks}
                     onNavigate={setActiveTab}
                     onQuickSchedule={() => setActiveTab('calendar')}
+                    onAddEmployee={handleAddEmployee}
+                    onImportEmployees={handleImportEmployees}
+                    onImportCourses={handleImportCourses}
+                    onClearData={handleClearData}
+                    onResetData={handleResetData}
+                    onDeleteEmployee={handleDeleteEmployee}
                   />
                 )}
 
@@ -879,6 +1045,12 @@ export default function App() {
           </button>
           
           <button
+            onClick={handleClearData}
+            className="text-[9px] font-bold text-red-400 hover:text-red-300 border border-red-950 px-2 py-1 rounded bg-slate-900 cursor-pointer transition-colors"
+          >
+            Make Data Zero
+          </button>
+          <button
             onClick={handleResetData}
             className="text-[9px] font-bold text-slate-400 hover:text-white border border-slate-850 px-2 py-1 rounded bg-slate-900 cursor-pointer transition-colors"
           >
@@ -1009,6 +1181,15 @@ export default function App() {
             </button>
 
             <button
+              onClick={handleClearData}
+              className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-tight transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              title="Wipe database to zero to upload your own custom data"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-650" />
+              <span>Make Data Zero</span>
+            </button>
+
+            <button
               onClick={handleResetData}
               className="bg-slate-100 text-slate-650 px-3 py-1.5 rounded-lg border border-slate-205 text-xs font-bold uppercase tracking-tight hover:bg-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
               title="Reset data back to preloaded defaults"
@@ -1055,6 +1236,12 @@ export default function App() {
                 onQuickSchedule={() => {
                   setActiveTab('calendar');
                 }}
+                onAddEmployee={handleAddEmployee}
+                onImportEmployees={handleImportEmployees}
+                onImportCourses={handleImportCourses}
+                onClearData={handleClearData}
+                onResetData={handleResetData}
+                onDeleteEmployee={handleDeleteEmployee}
               />
             )}
 
