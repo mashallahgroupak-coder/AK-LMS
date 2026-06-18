@@ -1,170 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Course, Employee, TrainingEvent, PostAssessmentFeedback, PostAssessmentMark } from '../types';
-import { Award, Star, List, PenTool, CheckCircle, BrainCircuit, UserCheck, Scroll, Save, SmilePlus, Plus, BookOpen, Clock, ArrowRight, ArrowLeft, AlertCircle, Check, X } from 'lucide-react';
-
-interface MCQQuestion {
-  id: number;
-  question: string;
-  options: string[];
-  correctAnswerIdx: number;
-}
-
-const FAQ_QUESTION_SETS: { [courseId: string]: MCQQuestion[] } = {
-  "CRS-01": [
-    {
-      id: 1,
-      question: "Which light source is standard in Artistic Garment color grading cabinets to evaluate American retail specs?",
-      options: ["A Incandescent Light", "D65 light source (Simulated Daylight)", "UV Blacklight Filter", "Horizon Warm White"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 2,
-      question: "On a spectrophotometer, what does a negative b* output directly represent?",
-      options: ["Red tint deviation", "Yellow/Blue shade dominance (Blue shift)", "Starch concentration", "Weight distribution coefficient"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 3,
-      question: "Why must test swatches be conditioned for 4 hours before visual assessment?",
-      options: ["To stabilize moisture and temperature that change indigo light reflection properties", "To allow spin oil to evaporate completely", "To allow starch coating to crack", "To increase weaving tension"],
-      correctAnswerIdx: 0
-    },
-    {
-      id: 4,
-      question: "What is Metamerism in textile color quality management?",
-      options: ["Severe fabric shrink after five washes", "A mismatch where color matches under one light source but differs under another", "Dye bleeding in water baths", "Uneven thickness in yarn spinning"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 5,
-      question: "Which of the following scales is standard to measure chemical staining and color bleeding?",
-      options: ["GSM weighing scales", "Gray Scale for Staining and color transfer", "Warp Shrinkage grid ruler", "ASTM chemical index chart"],
-      correctAnswerIdx: 1
-    }
-  ],
-  "CRS-03": [
-    {
-      id: 1,
-      question: "What is the primary objective of continuous quality audits under ISO 9001:2015 specifications?",
-      options: ["Imposing fines on raw helper staff", "Establishing continuous improvement and preventing problems from occurring", "Speeding up visual scan times to 2 seconds", "Deleting outdated manufacturing logs"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 2,
-      question: "On AGI production lines who has full operational authority to issue a HOLD quarantine tag on suspicious cargo?",
-      options: ["Canteen food server assistants", "QA Inspector / QA Area Incharge", "Electrical motor helpers", "Mechanical maintenance apprentices"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 3,
-      question: "If defect recurrence exceeds Acceptable Quality Limit (AQL) boundaries under SOPs, what action must occur?",
-      options: ["Conceal the batch and load it into delivery trucks", "Release the consignment to save warehousing space", "Quarantine the lot, label with code, and submit a CAR (Corrective Action Request) to HOD", "Unplug the air compressor line"],
-      correctAnswerIdx: 2
-    },
-    {
-      id: 4,
-      question: "Which standard form registers verified training attendee signatures?",
-      options: ["HRM/4/008b (Feedback Survey)", "HRM/4/009 (Trainee Attendance Sheet)", "HRM/4/010 (Skills matrix grid handbook)", "QA/5/012 (Daily shade review sheet)"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 5,
-      question: "Which phrase defines the structural difference between Quality Control (QC) and Quality Assurance (QA)?",
-      options: ["QC is testing-focused inspection of parts; QA establishes systemic processes and training to prevent errors", "QA and QC are identical words in industrial manufacturing", "QA is only done exclusively during coffee breaks; QC is done at nights", "QA stands for Qualify Answer; QC stands for Quality Complaint"],
-      correctAnswerIdx: 0
-    }
-  ],
-  "CRS-04": [
-    {
-      id: 1,
-      question: "In the 4-Point System of fabric inspection, what is the maximum permissible points that can be awarded to any single defect?",
-      options: ["1 point", "2 points", "4 points", "10 points"],
-      correctAnswerIdx: 2
-    },
-    {
-      id: 2,
-      question: "Under the standard 4-Point system, if an inspector finds a defect measuring 7 inches, how many points are recorded?",
-      options: ["1 point", "2 points", "3 points", "4 points"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 3,
-      question: "What is the core purpose of holding regular Quality Inspector 'Calibration' rounds?",
-      options: ["Recalibrating high-speed metal cutting blades", "Removing subjective differences so inspectors assign the same grades to the same defects", "Refining yarn blending mixtures", "Measuring operator blood pressure"],
-      correctAnswerIdx: 1
-    },
-    {
-      id: 4,
-      question: "A fabric defect spanning greater than 9 inches attracts how many inspection points under the 4-point rule?",
-      options: ["1 point", "2 points", "3 points", "4 points"],
-      correctAnswerIdx: 3
-    },
-    {
-      id: 5,
-      question: "Which defect type represents a critical filling failure in denim rolling?",
-      options: ["Minor lint sticker easily brushed away", "Major continuous filling bands or warp stripes running face-wide", "Slight inner belt tag misprint", "A light thread tail"],
-      correctAnswerIdx: 1
-    }
-  ]
-};
-
-const DEFAULT_QUESTIONS: MCQQuestion[] = [
-  {
-    id: 1,
-    question: "What is the core purpose of conducting evaluations and assessments after quality training?",
-    options: [
-      "Securing compliance signatures for auditing record files only",
-      "Measuring actual skill transfer, lessons absorption, and practical floor competence",
-      "Calculating how to substitute raw fiber imports",
-      "Drafting daily shift output logs blindly"
-    ],
-    correctAnswerIdx: 1
-  },
-  {
-    id: 2,
-    question: "In 5-Whys analysis (Root Cause Analysis - RCA), why is asking 'Why' multiple times critical?",
-    options: [
-      "To verify who made the mistake to distribute fines",
-      "To pierce past superficial surface symptoms to discover the true underlying systemic cause",
-      "To delay filling of incident paperwork metrics",
-      "Because the auditor likes reading redundant data loops"
-    ],
-    correctAnswerIdx: 1
-  },
-  {
-    id: 3,
-    question: "What must be done immediately when an inspector spots a non-conformance lot?",
-    options: [
-      "Push it under passing fabric rolls to avoid record logs",
-      "Segregate the cargo with a designated RED quarantine card and place it in hold quarantine",
-      "Send it to shipment early before the HOD notices",
-      "Discard the lot instantly without creating records"
-    ],
-    correctAnswerIdx: 1
-  },
-  {
-    id: 4,
-    question: "What does standard 'SOP' represent on industrial floor guides?",
-    options: [
-      "Standard Operating Procedure",
-      "Special Optimization Policy",
-      "Sector Organization Platform",
-      "Series Output Projector"
-    ],
-    correctAnswerIdx: 0
-  },
-  {
-    id: 5,
-    question: "Which quality approach is highly cost-preventative in denim manufacturing?",
-    options: [
-      "Post-shipment customer claims reconciliation",
-      "In-line error prevention and immediate correction training",
-      "Reworking stitching defects post-fabrication",
-      "Replacing complete rolling machines daily"
-    ],
-    correctAnswerIdx: 1
-  }
-];
+import { Course, Employee, TrainingEvent, PostAssessmentFeedback, PostAssessmentMark, MCQQuestion } from '../types';
+import { Award, Star, List, PenTool, CheckCircle, BrainCircuit, UserCheck, Scroll, Save, SmilePlus, Plus, BookOpen, Clock, ArrowRight, ArrowLeft, AlertCircle, Check, X, Edit3, Trash2 } from 'lucide-react';
 
 interface PostAssessmentProps {
   courses: Course[];
@@ -172,8 +8,11 @@ interface PostAssessmentProps {
   events: TrainingEvent[];
   feedbacks: PostAssessmentFeedback[];
   postMarks: PostAssessmentMark[];
+  questions: MCQQuestion[];
   onAddFeedback: (fb: PostAssessmentFeedback) => void;
   onSaveMarks: (eventId: string, marks: { employeeCode: string; obtainedMarks: number; totalMarks: number }[]) => void;
+  onSaveQuestion: (question: MCQQuestion) => void;
+  onDeleteQuestion: (id: string) => void;
 }
 
 export const PostAssessment: React.FC<PostAssessmentProps> = ({
@@ -182,10 +21,13 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
   events,
   feedbacks,
   postMarks,
+  questions,
   onAddFeedback,
-  onSaveMarks
+  onSaveMarks,
+  onSaveQuestion,
+  onDeleteQuestion
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'grades' | 'feedback' | 'log-feedback' | 'mcq'>('grades');
+  const [activeSubTab, setActiveSubTab] = useState<'grades' | 'feedback' | 'log-feedback' | 'mcq' | 'mcq-admin'>('grades');
   const [selectedEventId, setSelectedEventId] = useState(events.filter(e => e.status === 'Completed')[0]?.id || events[0]?.id || '');
 
   const activeEvent = events.find(e => e.id === selectedEventId);
@@ -194,7 +36,6 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
 
   // Local state for grading paper inputs
   const [draftMarks, setDraftMarks] = useState<{ [code: string]: number }>({});
-  const [draftRemarks, setDraftRemarks] = useState('');
 
   // Local state for recording worker paper feedback
   const [newFb, setNewFb] = useState({
@@ -214,9 +55,23 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
   const [activeQuizEmployee, setActiveQuizEmployee] = useState<string>('');
   const [quizInProgress, setQuizInProgress] = useState<boolean>(false);
   const [currentQIndex, setCurrentQIndex] = useState<number>(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [qId: number]: number }>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [qId: string]: number }>({});
   const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
-  const [quizTimeRemaining, setQuizTimeRemaining] = useState<number>(600); // 10 minutes simulated countdown
+  const [quizTimeRemaining, setQuizTimeRemaining] = useState<number>(600); // countdown
+
+  // MCQ Admin States
+  const [editingQuestion, setEditingQuestion] = useState<MCQQuestion | null>(null);
+  const [showQuestionModal, setShowQuestionModal] = useState<boolean>(false);
+  const [formQ, setFormQ] = useState({
+    courseId: 'default',
+    question: '',
+    questionUrdu: '',
+    optA: '',
+    optB: '',
+    optC: '',
+    optD: '',
+    correctAnswerIdx: 0
+  });
 
   // Simulated countdown timer effect
   useEffect(() => {
@@ -246,16 +101,16 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
   };
 
   const getRatingLabel = (percent: number) => {
-    if (percent < 50) return { label: 'Unsatisfactory', color: 'text-red-700 bg-red-50' };
-    if (percent <= 65) return { label: 'Satisfactory', color: 'text-orange-850 bg-orange-50' };
-    if (percent <= 85) return { label: 'Good', color: 'text-blue-800 bg-blue-50' };
-    return { label: 'Excellent', color: 'text-emerald-700 bg-emerald-50' };
+    if (percent < 50) return { label: 'Unsatisfactory', color: 'text-rose-700 bg-rose-50 border-rose-100' };
+    if (percent <= 65) return { label: 'Satisfactory', color: 'text-orange-800 bg-orange-50 border-orange-150' };
+    if (percent <= 85) return { label: 'Good', color: 'text-indigo-805 bg-indigo-50 border-indigo-150' };
+    return { label: 'Excellent', color: 'text-emerald-700 bg-emerald-50 border-emerald-150' };
   };
 
   const handleSaveGradesSubmit = () => {
     const list = activeAttendees.map(att => ({
       employeeCode: att.employeeCode,
-      obtainedMarks: Number(draftMarks[att.employeeCode] || 80),
+      obtainedMarks: Number(draftMarks[att.employeeCode] !== undefined ? draftMarks[att.employeeCode] : 80),
       totalMarks: 100
     }));
 
@@ -309,6 +164,73 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
     });
   };
 
+  // MCQ Admin submission handler
+  const handleOpenAddQuestion = () => {
+    setEditingQuestion(null);
+    setFormQ({
+      courseId: activeCourse?.id || 'default',
+      question: '',
+      questionUrdu: '',
+      optA: '',
+      optB: '',
+      optC: '',
+      optD: '',
+      correctAnswerIdx: 0
+    });
+    setShowQuestionModal(true);
+  };
+
+  const handleOpenEditQuestion = (q: MCQQuestion) => {
+    setEditingQuestion(q);
+    setFormQ({
+      courseId: q.courseId,
+      question: q.question,
+      questionUrdu: q.questionUrdu || '',
+      optA: q.options[0] || '',
+      optB: q.options[1] || '',
+      optC: q.options[2] || '',
+      optD: q.options[3] || '',
+      correctAnswerIdx: q.correctAnswerIdx
+    });
+    setShowQuestionModal(true);
+  };
+
+  const handleSaveQuestionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const options = [formQ.optA.trim(), formQ.optB.trim(), formQ.optC.trim(), formQ.optD.trim()].filter(o => o !== '');
+    if (options.length < 2) {
+      alert("Please provide at least two valid options for this MCQ!");
+      return;
+    }
+
+    const qId = editingQuestion ? editingQuestion.id : `Q-${Date.now().toString().slice(-6)}`;
+    const freshQ: MCQQuestion = {
+      id: qId,
+      courseId: formQ.courseId,
+      question: formQ.question,
+      questionUrdu: formQ.questionUrdu || undefined,
+      options,
+      correctAnswerIdx: Number(formQ.correctAnswerIdx)
+    };
+
+    onSaveQuestion(freshQ);
+    setShowQuestionModal(false);
+  };
+
+  const handleDeleteQuestion = (id: string, text: string) => {
+    if (confirm(`⚠️ Admin action: Are you sure you want to delete this question?\n"${text.slice(0, 60)}..."`)) {
+      onDeleteQuestion(id);
+    }
+  };
+
+  // Get active quiz questions from Firestore prop list
+  const getQuizQuestions = () => {
+    // Filter questions matching course, fallback to general/default MCQ questions
+    const match = questions.filter(q => q.courseId === (activeCourse?.id || ''));
+    if (match.length > 0) return match;
+    return questions.filter(q => q.courseId === 'default' || !q.courseId);
+  };
+
   // Compute stats for current grades sheet
   let totalObtained = 0;
   let totalPossible = 0;
@@ -335,7 +257,7 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
           <select
             value={selectedEventId}
             onChange={e => setSelectedEventId(e.target.value)}
-            className="px-3 py-1.5 border border-slate-200 hover:border-slate-350 bg-white font-medium rounded-xl text-xs focus:outline-none cursor-pointer"
+            className="px-3 py-1.5 border border-slate-200 hover:border-slate-300 bg-white font-medium rounded-xl text-xs text-slate-800 focus:outline-none cursor-pointer"
           >
             {events.map(evt => {
               const crs = courses.find(c => c.id === evt.courseId);
@@ -350,65 +272,71 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
       </div>
 
       {/* Sub tabs line */}
-      <div className="flex border-b border-slate-200 text-sm">
+      <div className="flex border-b border-slate-200 text-sm flex-wrap gap-1">
         <button
           onClick={() => setActiveSubTab('grades')}
-          className={`pb-3 px-5 font-semibold transition-all relative cursor-pointer ${
-            activeSubTab === 'grades' ? 'text-slate-900' : 'text-slate-400'
+          className={`pb-3 px-4 font-semibold transition-all relative cursor-pointer ${
+            activeSubTab === 'grades' ? 'text-slate-900 border-b-2 border-slate-950' : 'text-slate-400'
           }`}
         >
-          Assessment Scores sheet (HRM/4/008d)
-          {activeSubTab === 'grades' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 rounded-full" />}
+          Assessment Scores (HRM/4/008d)
         </button>
 
         <button
           onClick={() => setActiveSubTab('feedback')}
-          className={`pb-3 px-5 font-semibold transition-all relative cursor-pointer ${
-            activeSubTab === 'feedback' ? 'text-slate-900' : 'text-slate-400'
+          className={`pb-3 px-4 font-semibold transition-all relative cursor-pointer ${
+            activeSubTab === 'feedback' ? 'text-slate-900 border-b-2 border-slate-950' : 'text-slate-400'
           }`}
         >
-          Trainee Feedback Reviews (HRM/4/008b)
-          {activeSubTab === 'feedback' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 rounded-full" />}
+          Feedback Reviews (HRM/4/008b)
         </button>
 
         <button
           onClick={() => setActiveSubTab('log-feedback')}
-          className={`pb-3 px-5 font-semibold text-sky-600 transition-all relative cursor-pointer ${
-            activeSubTab === 'log-feedback' ? 'text-sky-800' : 'text-sky-550 hover:text-sky-655'
+          className={`pb-3 px-4 font-semibold text-sky-600 transition-all relative cursor-pointer ${
+            activeSubTab === 'log-feedback' ? 'text-sky-900 border-b-2 border-sky-600' : 'text-slate-400 hover:text-sky-500'
           }`}
         >
-          <span className="flex items-center">
-            <SmilePlus className="w-4 h-4 mr-1 shrink-0" />
-            Record Paper Feedback
+          <span className="flex items-center gap-1.5">
+            <SmilePlus className="w-4 h-4 shrink-0" />
+            Record Feedback Paper
           </span>
-          {activeSubTab === 'log-feedback' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-500 rounded-full" />}
         </button>
 
         <button
           onClick={() => setActiveSubTab('mcq')}
-          className={`pb-3 px-5 font-semibold text-emerald-600 transition-all relative cursor-pointer ${
-            activeSubTab === 'mcq' ? 'text-emerald-850' : 'text-emerald-500 hover:text-emerald-650'
+          className={`pb-3 px-4 font-semibold text-emerald-600 transition-all relative cursor-pointer ${
+            activeSubTab === 'mcq' ? 'text-emerald-900 border-b-2 border-emerald-500' : 'text-slate-400 hover:text-emerald-500'
           }`}
         >
-          <span className="flex items-center">
-            <BrainCircuit className="w-4 h-4 mr-1 shrink-0" />
+          <span className="flex items-center gap-1.5">
+            <BrainCircuit className="w-4 h-4 shrink-0" />
             Online MCQ Exam Room
           </span>
-          {activeSubTab === 'mcq' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />}
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('mcq-admin')}
+          className={`pb-3 px-4 font-semibold text-amber-700 transition-all relative cursor-pointer ${
+            activeSubTab === 'mcq-admin' ? 'text-amber-900 border-b-2 border-amber-600' : 'text-slate-400 hover:text-amber-600'
+          }`}
+        >
+          <span className="flex items-center gap-1.5 font-bold animate-pulse">
+            <span>🛡️</span>
+            MCQ Admin Desk
+          </span>
         </button>
       </div>
 
       {/* RENDER DYNAMIC MODULES */}
       {activeSubTab === 'grades' && (
         activeAttendees.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-100 text-slate-400 text-xs">
+          <div className="bg-white rounded-2xl p-11 text-center border border-slate-100 text-slate-400 text-xs">
             No employees marked present for this event yet. Mark attendance and save sheet in the Attendance tab first.
           </div>
         ) : (
           <div className="space-y-6">
-            {/* HRM/4/008(d) visual sheet replica */}
-            <div className="bg-white border-2 border-slate-900 rounded-2xl shadow-lg p-6 md:p-8 space-y-6 max-w-4xl mx-auto">
-              {/* Header */}
+            <div className="bg-white border-2 border-slate-950 rounded-2xl shadow-lg p-6 md:p-8 space-y-6 max-w-4xl mx-auto">
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-900 uppercase">Training Assessment Scores</h3>
@@ -421,10 +349,10 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
               </div>
 
               {/* Assessment table */}
-              <div className="border border-slate-900 rounded-xl overflow-hidden text-xs">
+              <div className="border border-slate-400 rounded-xl overflow-hidden text-xs">
                 <table className="min-w-full divide-y divide-slate-400">
                   <thead className="bg-slate-50">
-                    <tr className="divide-x divide-slate-400">
+                    <tr className="divide-x divide-slate-405">
                       <th className="p-3 text-center font-bold text-slate-900 w-12">S#</th>
                       <th className="p-3 text-left font-bold text-slate-900 w-28">Employee Code</th>
                       <th className="p-3 text-left font-bold text-slate-900">Name of Trainee</th>
@@ -436,21 +364,21 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-200 bg-white">
                     {activeAttendees.map((att, idx) => {
                       const emp = employees.find(e => e.code === att.employeeCode);
                       if (!emp) return null;
 
-                      const marks = draftMarks[att.employeeCode] || 0;
-                      const percent = (marks / 100) * 100;
+                      const marks = draftMarks[att.employeeCode] !== undefined ? draftMarks[att.employeeCode] : 0;
+                      const percent = Math.min((marks / 100) * 100, 100);
                       const rObj = getRatingLabel(percent);
 
                       return (
                         <tr key={att.employeeCode} className="divide-x divide-slate-200">
-                          <td className="p-3 text-center font-mono font-medium text-slate-550">{idx + 1}</td>
+                          <td className="p-3 text-center font-mono font-medium text-slate-500">{idx + 1}</td>
                           <td className="p-3 font-mono font-bold text-slate-900">{emp.code}</td>
                           <td className="p-3 font-black text-slate-950">{emp.name}</td>
-                          <td className="p-3 text-slate-650">{emp.designation}</td>
+                          <td className="p-3 text-slate-600">{emp.designation}</td>
                           <td className="p-3 text-center">
                             <input
                               type="number"
@@ -458,13 +386,13 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                               max="100"
                               value={marks}
                               onChange={e => handleGradeChange(att.employeeCode, Number(e.target.value))}
-                              className="w-16 px-1.5 py-1 border border-slate-300 rounded font-mono text-center bg-transparent text-xs"
+                              className="w-16 px-1.5 py-1 border border-slate-300 rounded font-mono text-center bg-transparent text-xs font-bold"
                             />
                           </td>
-                          <td className="p-3 text-center font-mono text-slate-500">100</td>
+                          <td className="p-3 text-center font-mono text-slate-505">100</td>
                           <td className="p-3 text-center font-mono font-bold text-slate-900">{percent}%</td>
                           <td className="p-3 text-center">
-                            <span className={`inline-block px-2.5 py-0.5 rounded-full font-bold uppercase text-[9px] ${rObj.color}`}>
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full font-bold uppercase text-[9px] border ${rObj.color}`}>
                               {rObj.label}
                             </span>
                           </td>
@@ -480,14 +408,14 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                 <div className="space-y-2">
                   <h4 className="font-bold uppercase tracking-wider text-[10px] text-slate-400">Compliance & Benchmark Rating Rules</h4>
                   <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
-                    <div>&gt; 85%: Excellent</div>
-                    <div>66% – 85%: Good</div>
-                    <div>50% – 65%: Satisfactory</div>
-                    <div>Below 50%: Unsatisfactory</div>
+                    <div>&gt; 85%: Excellent Certificate</div>
+                    <div>66% – 85%: Good Standing</div>
+                    <div>50% – 65%: Satisfactory Pass</div>
+                    <div>Below 50%: Unsatisfactory Fail</div>
                   </div>
                 </div>
 
-                <div className="bg-white border p-4 rounded-xl space-y-2.5">
+                <div className="bg-white border border-slate-200 p-4 rounded-xl space-y-2.5">
                   <h4 className="font-bold text-slate-900">Overall Department Results</h4>
                   <div className="flex justify-between border-b border-slate-100 pb-1.5">
                     <span>Average Department Percentage:</span>
@@ -495,7 +423,7 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span>Overall Rating Index:</span>
-                    <span className={`font-bold font-mono uppercase text-[10px] px-2 py-0.5 rounded-full ${departmentalRatingObj.color}`}>
+                    <span className={`font-bold font-mono uppercase text-[10px] px-2.5 py-0.5 border rounded-full ${departmentalRatingObj.color}`}>
                       {departmentalRatingObj.label}
                     </span>
                   </div>
@@ -507,9 +435,9 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                 <span className="text-slate-500">Verify assessment scores before recording into the database catalog.</span>
                 <button
                   onClick={handleSaveGradesSubmit}
-                  className="px-5 py-2.5 bg-slate-900 text-white font-bold rounded-xl flex items-center space-x-2 border border-slate-900 hover:bg-slate-800 transition-all cursor-pointer shadow"
+                  className="px-5 py-2.5 bg-slate-950 text-white font-bold rounded-xl flex items-center space-x-2 border border-slate-950 hover:bg-slate-850 transition-all cursor-pointer shadow"
                 >
-                  <Save className="w-4 h-4 text-white" />
+                  <Save className="w-4 h-4 text-white hover:text-white" />
                   <span>Save Grades sheet</span>
                 </button>
               </div>
@@ -526,7 +454,7 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
               onClick={() => setActiveSubTab('log-feedback')}
               className="px-3.5 py-1.5 bg-sky-500 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center mx-auto space-x-1 cursor-pointer"
             >
-              <SmilePlus className="w-4 h-4 text-slate-950" />
+              <SmilePlus className="w-4 h-4 text-slate-950 animate-bounce" />
               <span>Record feedback survey now</span>
             </button>
           </div>
@@ -534,7 +462,6 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="feedback-grid-display">
             {filteredFeedbacks.map(f => {
               const emp = employees.find(e => e.code === f.employeeCode);
-              // Calculate average evaluation score of 9 parameters
               const vals = Object.values(f.scores) as number[];
               const sum = vals.reduce((a, b) => a + b, 0);
               const avg = (sum / Object.keys(f.scores).length).toFixed(1);
@@ -598,14 +525,14 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
             </div>
           </div>
 
-          <form onSubmit={handleFeedbackSubmit} className="p-6 space-y-5 text-sm">
+          <form onSubmit={handleFeedbackSubmit} className="p-6 space-y-5 text-sm text-slate-900 bg-white">
             <div className="grid grid-cols-2 gap-3.5">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-705">Selecting Employee / Trainee *</label>
                 <select
                   value={newFb.employeeCode}
                   onChange={e => setNewFb({ ...newFb, employeeCode: e.target.value })}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg hover:border-slate-400 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none bg-white text-slate-900"
                   required
                 >
                   {employees.map(emp => (
@@ -617,93 +544,93 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
               </div>
 
               <div className="space-y-1 flex flex-col justify-end">
-                <p className="text-[10px] text-slate-400 leading-snug">Feedback applies to the currently selected course: <strong>{activeCourse?.name || "Program"}</strong></p>
+                <p className="text-[10px] text-slate-400 leading-snug">Feedback applies to currently selected course: <strong>{activeCourse?.name || "Program"}</strong></p>
               </div>
             </div>
 
-            {/* Score grids matching parameters */}
+            {/* Score grids */}
             <div className="space-y-3.5">
               <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Statements Assessments (1-5) where 5 is Strongly Agree, 1 is Strongly Disagree</h4>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 text-xs text-slate-755">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 text-xs text-slate-755 bg-slate-50 p-4 rounded-xl border">
                 <div className="flex justify-between items-center">
-                  <span>1. The topic was covered adequately?</span>
-                  <select value={newFb.q1} onChange={e => setNewFb({...newFb, q1: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>1. Course topic covered adequately?</span>
+                  <select value={newFb.q1} onChange={e => setNewFb({...newFb, q1: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span>2. Required training aids were available?</span>
-                  <select value={newFb.q2} onChange={e => setNewFb({...newFb, q2: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>2. Core learning aids were available?</span>
+                  <select value={newFb.q2} onChange={e => setNewFb({...newFb, q2: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span>3. The trainer was knowledgeable?</span>
-                  <select value={newFb.q3} onChange={e => setNewFb({...newFb, q3: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>3. Master trainer was knowledgeable?</span>
+                  <select value={newFb.q3} onChange={e => setNewFb({...newFb, q3: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span>4. The trainer was easy to hear?</span>
-                  <select value={newFb.q4} onChange={e => setNewFb({...newFb, q4: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>4. Auditor/Trainer audibility good?</span>
+                  <select value={newFb.q4} onChange={e => setNewFb({...newFb, q4: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span>5. Presented materials useful for tasks?</span>
-                  <select value={newFb.q5} onChange={e => setNewFb({...newFb, q5: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>5. Presented syllabus useful for tasks?</span>
+                  <select value={newFb.q5} onChange={e => setNewFb({...newFb, q5: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span>6. Trainee participation was active?</span>
-                  <select value={newFb.q6} onChange={e => setNewFb({...newFb, q6: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>6. Employee participation active?</span>
+                  <select value={newFb.q6} onChange={e => setNewFb({...newFb, q6: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span>7. Workshop length was satisfactory?</span>
-                  <select value={newFb.q7} onChange={e => setNewFb({...newFb, q7: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>7. Workshop length satisfactory?</span>
+                  <select value={newFb.q7} onChange={e => setNewFb({...newFb, q7: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span>8. Location setup/conveniences good?</span>
-                  <select value={newFb.q8} onChange={e => setNewFb({...newFb, q8: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white">
+                  <span>8. Location setup/seating comfortable?</span>
+                  <select value={newFb.q8} onChange={e => setNewFb({...newFb, q8: Number(e.target.value)})} className="px-2 py-0.5 border border-slate-300 text-xs rounded bg-white text-slate-900 font-mono font-bold">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
 
-                <div className="flex justify-between items-center col-span-full border-t border-dashed pt-2">
-                  <span className="font-bold text-slate-800">9. Overall Assessment of value?</span>
-                  <select value={newFb.q9} onChange={e => setNewFb({...newFb, q9: Number(e.target.value)})} className="px-3 py-1 border border-slate-300 font-bold font-mono text-xs rounded bg-white">
+                <div className="flex justify-between items-center col-span-full border-t border-slate-200 border-dashed pt-2.5 mt-1.5">
+                  <span className="font-extrabold text-slate-900">9. Overall Assessment score:</span>
+                  <select value={newFb.q9} onChange={e => setNewFb({...newFb, q9: Number(e.target.value)})} className="px-3 py-1 border border-slate-350 font-black font-mono text-xs rounded bg-white text-slate-950">
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
               </div>
             </div>
 
-            {/* Narratives open parameters */}
+            {/* Narratives */}
             <div className="space-y-3 pt-2">
-              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Narratives Reviews</h4>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Narrative open reviews</h4>
               
-              <div className="space-y-3 text-xs">
+              <div className="space-y-3 text-xs bg-white">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700">Which area of training workshop was covered best?</label>
                   <input
                     type="text"
                     value={newFb.coveredBest}
                     onChange={e => setNewFb({ ...newFb, coveredBest: e.target.value })}
-                    placeholder="e.g. Spectrophotometer shading comparisons"
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
+                    placeholder="e.g. Color calibration standards in American retail specs"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white text-slate-900"
                   />
                 </div>
 
@@ -713,8 +640,8 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                     type="text"
                     value={newFb.needsImprovement}
                     onChange={e => setNewFb({ ...newFb, needsImprovement: e.target.value })}
-                    placeholder="e.g. Add more live fabric samples"
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
+                    placeholder="e.g. Add more fabric samples showing shade-guides"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white text-slate-900"
                   />
                 </div>
 
@@ -724,8 +651,8 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                     rows={2}
                     value={newFb.applicationPlan}
                     onChange={e => setNewFb({ ...newFb, applicationPlan: e.target.value })}
-                    placeholder="I will use the light box standardized angles during dye shadow audits."
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
+                    placeholder="I will angle standard fabric panels at exactly 45 degrees inside our conditioning box."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white text-slate-900"
                   />
                 </div>
               </div>
@@ -741,9 +668,9 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs flex items-center space-x-1 border border-slate-900 hover:bg-slate-800 transition-all cursor-pointer shadow"
+                className="px-4 py-2 bg-slate-950 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 border border-slate-950 hover:bg-slate-850 transition-all cursor-pointer shadow-md"
               >
-                <Plus className="w-4 h-4 text-white" />
+                <Plus className="w-4 h-4 text-white hover:text-white" />
                 <span>Submit Feedback Check</span>
               </button>
             </div>
@@ -753,33 +680,31 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
 
       {activeSubTab === 'mcq' && (
         <div className="max-w-4xl mx-auto space-y-6" id="digital-mcq-exam-section">
-          {/* Main Info */}
-          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
                 <BrainCircuit className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold">AGI Denim - Dynamic Post-Training Examination</h3>
+                <h3 className="text-base font-bold text-white">AGI Denim - Modern Post-Training Assessment</h3>
               </div>
               <p className="text-xs text-slate-300">
-                Online testing room for Course: <strong className="text-white text-semibold">{activeCourse?.name} ({activeCourse?.id})</strong>. Must have been marked present in attendance sheets to start.
+                Online testing room for Course: <strong className="text-emerald-400 font-semibold">{activeCourse?.name || "General Course"} ({activeCourse?.id || "GEN"})</strong>. Dual Urdu & English display for floor level inspectors.
               </p>
             </div>
-            <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-xs shrink-0 font-mono">
-              Event Ref: <span className="text-emerald-400 font-bold">{activeEvent?.trgRef}</span>
+            <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-xs shrink-0 font-mono text-emerald-305 font-bold">
+              Scheduled Event: <span className="text-emerald-450">{activeEvent?.trgRef || "Any"}</span>
             </div>
           </div>
 
           {!quizInProgress ? (
-            /* TRAINEES CHOOSE AND LAUNCH LIST */
             <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Attendee Eligibility & MCQ Status</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Shift Attendees Eligibility & Examination Status</h4>
               
               {activeAttendees.length === 0 ? (
                 <div className="text-center py-8 text-xs text-slate-400">
-                  No attendees marked present for this event. Record and save daily attendance first.
+                  No attendees marked present for this event. Record and save daily attendance sheet first.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {activeAttendees.map(att => {
                     const emp = employees.find(e => e.code === att.employeeCode);
                     if (!emp) return null;
@@ -788,16 +713,15 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                     const isPassed = mark && mark.obtainedMarks >= 50;
 
                     return (
-                      <div key={emp.code} className="border border-slate-150 p-4 rounded-xl flex items-center justify-between hover:bg-slate-50/50 transition-all">
-                        <div className="space-y-1 truncate">
+                      <div key={emp.code} className="border border-slate-200 p-4 rounded-xl flex items-center justify-between hover:bg-slate-50/50 transition-all bg-white relative">
+                        <div className="space-y-1 truncate pr-2">
                           <p className="font-bold text-slate-950 truncate">{emp.name}</p>
-                          <p className="text-[10px] text-slate-400">{emp.designation} • <span className="font-mono font-bold">{emp.code}</span></p>
+                          <p className="text-[10px] text-slate-450">{emp.designation} • <span className="font-mono font-bold text-blue-600">{emp.code}</span></p>
                           
-                          {/* Marks status badge */}
                           {mark ? (
                             <div className="flex items-center space-x-1 mt-1">
-                              <span className={`inline-block text-[9px] font-bold font-mono px-2 py-0.5 rounded ${
-                                isPassed ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' : 'bg-red-50 text-red-800 border border-red-100'
+                              <span className={`inline-block text-[9px] font-bold font-mono px-2 py-0.5 rounded border ${
+                                isPassed ? 'bg-emerald-50 text-emerald-800 border-emerald-100' : 'bg-rose-50 text-rose-800 border-rose-100'
                               }`}>
                                 Score: {mark.obtainedMarks}% ({isPassed ? 'Passed' : 'Failed'})
                               </span>
@@ -809,24 +733,29 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                           )}
                         </div>
 
-                        <div className="shrink-0 ml-3">
+                        <div className="shrink-0 ml-1">
                           <button
                             onClick={() => {
+                              const quizQuestions = getQuizQuestions();
+                              if (quizQuestions.length === 0) {
+                                alert("No questions available for this course! Please add them in MCQ Admin Desk tab.");
+                                return;
+                              }
                               setActiveQuizEmployee(emp.code);
                               setQuizInProgress(true);
                               setCurrentQIndex(0);
                               setSelectedAnswers({});
                               setQuizCompleted(false);
-                              setQuizTimeRemaining(420); // Reset timer to 7 minutes
+                              setQuizTimeRemaining(420); // 7 mins
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1 cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1 cursor-pointer ${
                               mark 
-                                ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-202' 
-                                : 'bg-emerald-500 hover:bg-emerald-600 text-slate-900 shadow-sm'
+                                ? 'bg-slate-100 hover:bg-slate-205 text-slate-650 border border-slate-200' 
+                                : 'bg-emerald-500 hover:bg-emerald-600 text-slate-900 border border-emerald-600 shadow-sm'
                             }`}
                           >
-                            <span>{mark ? 'Re-take Exam' : 'Launch Exam'}</span>
-                            <ArrowRight className="w-3 h-3" />
+                            <span>{mark ? 'Re-take' : 'Launch Exam'}</span>
+                            <ArrowRight className="w-3 h-3 text-slate-900" />
                           </button>
                         </div>
                       </div>
@@ -838,7 +767,7 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
           ) : (
             /* ACTIVE EXAM INTERACTIVE VIEWPORT */
             (() => {
-              const quizQuestions = FAQ_QUESTION_SETS[activeCourse?.id || ''] || DEFAULT_QUESTIONS;
+              const quizQuestions = getQuizQuestions();
               const currentQuestion = quizQuestions[currentQIndex];
               const applicant = employees.find(e => e.code === activeQuizEmployee);
               
@@ -847,24 +776,22 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
               const progressPct = quizQuestions.length > 0 ? ((currentQIndex + 1) / quizQuestions.length) * 100 : 0;
 
               if (quizCompleted) {
-                // Compute Correct Responses
                 let correctCount = 0;
                 quizQuestions.forEach(q => {
                   if (selectedAnswers[q.id] === q.correctAnswerIdx) {
                     correctCount++;
                   }
                 });
-                const percentage = (correctCount / quizQuestions.length) * 100;
+                const percentage = Math.round((correctCount / quizQuestions.length) * 100);
                 const isPassed = percentage >= 50;
 
                 const handleCommitResult = () => {
-                  // Re-calc array of marks
                   const updatedDraft = { ...draftMarks, [activeQuizEmployee]: percentage };
                   setDraftMarks(updatedDraft);
 
                   const list = activeAttendees.map(att => {
                     const code = att.employeeCode;
-                    const val = code === activeQuizEmployee ? percentage : (draftMarks[code] || 0);
+                    const val = code === activeQuizEmployee ? percentage : (draftMarks[code] !== undefined ? draftMarks[code] : 0);
                     return {
                       employeeCode: code,
                       obtainedMarks: Number(val),
@@ -878,131 +805,129 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                 };
 
                 return (
-                  <div className="bg-white border-2 border-slate-900 rounded-2xl shadow-xl p-6 md:p-8 space-y-6" id="exam-scorecard-display">
-                    <div className="text-center space-y-2 border-b pb-5">
-                      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600">
-                        <Award className="w-10 h-10 animate-bounce" />
-                      </div>
-                      <h3 className="text-lg font-extrabold text-slate-900 uppercase">MCQ Paper Evaluated</h3>
-                      <p className="text-xs text-slate-500">Applicant: <strong>{applicant?.name} ({applicant?.code})</strong></p>
-                    </div>
+                  <div className="bg-white border-2 border-slate-950 rounded-2xl shadow-xl p-6 md:p-8 space-y-6" id="exam-scorecard-display">
+                     <div className="text-center space-y-2 border-b pb-5">
+                       <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600">
+                         <Award className="w-10 h-10 animate-bounce" />
+                       </div>
+                       <h3 className="text-lg font-extrabold text-slate-900 uppercase">MCQ Paper Evaluated</h3>
+                       <p className="text-xs text-slate-500">Applicant: <strong>{applicant?.name} ({applicant?.code})</strong></p>
+                     </div>
 
-                    {/* Radial score box */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                      <div className="bg-slate-50 p-6 rounded-2xl border text-center space-y-1 md:col-span-1">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block">SCORE OBTAINED</span>
-                        <span className={`text-4xl font-extrabold font-mono block ${isPassed ? 'text-emerald-600' : 'text-red-600'}`}>{percentage}%</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${isPassed ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
-                          {isPassed ? 'PASSED BENCHMARK' : 'FAILED BENCHMARK'}
-                        </span>
-                        <p className="text-[9px] text-slate-400 mt-2">Correct: {correctCount} of {quizQuestions.length} Questions</p>
-                      </div>
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                       <div className="bg-slate-50 p-6 rounded-2xl border text-center space-y-1 md:col-span-1 border-slate-205">
+                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block">SCORE OBTAINED</span>
+                         <span className={`text-4xl font-extrabold font-mono block ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>{percentage}%</span>
+                         <span className={`text-[10px] font-bold px-3 py-1 border rounded-full inline-block mt-1.5 ${isPassed ? 'bg-emerald-50 text-emerald-800 border-emerald-150' : 'bg-rose-50 text-rose-805 border-rose-150'}`}>
+                           {isPassed ? 'PASSED BENCHMARK' : 'FAILED BENCHMARK'}
+                         </span>
+                         <p className="text-[10px] text-slate-450 mt-2 font-mono">Correct: {correctCount} of {quizQuestions.length} Questions</p>
+                       </div>
 
-                      <div className="md:col-span-2 space-y-3 font-mono text-xs text-slate-650 bg-slate-50 p-5 rounded-2xl border">
-                        <h5 className="font-bold text-slate-800 uppercase tracking-tight font-sans text-[10px] text-slate-400">System Integration Impact</h5>
-                        <p className="text-[11px] leading-relaxed">
-                          ⚡ <strong>Skills Sync</strong>: Committing this scorecard immediately syncs with the Quality Skill Matrix.
-                        </p>
-                        <p className="text-[11px] leading-relaxed">
-                          📊 <strong>Compliance Metrics</strong>: Marks are cataloged into official ISO audits sheets under Standard Operations <strong>HRM/4/008d</strong>.
-                        </p>
-                        <p className="text-[11px] leading-relaxed">
-                          🎖️ <strong>SME Clearance</strong>: Scorers achieving &gt;90% are provisionally tagged for Level 5 Trainer status recommendations.
-                        </p>
-                      </div>
-                    </div>
+                       <div className="md:col-span-2 space-y-3 font-mono text-xs text-slate-600 bg-slate-50 p-5 rounded-2xl border border-slate-205">
+                         <h5 className="font-bold text-slate-800 uppercase tracking-tight font-sans text-[10px] text-slate-400 leading-none">System Integration Impact</h5>
+                         <p className="text-[11px] leading-relaxed">
+                           ⚡ <strong>Skills Sync</strong>: Committing this scorecard immediately syncs with Quality Skill Matrix.
+                         </p>
+                         <p className="text-[11px] leading-relaxed">
+                           📊 <strong>Compliance Metrics</strong>: Marks are cataloged into official ISO audits sheets under Standard Operations <strong>HRM/4/008d</strong>.
+                         </p>
+                         <p className="text-[11px] leading-relaxed">
+                           🎖️ <strong>SME Clearance</strong>: Scorers achieving &gt;90% are provisionally tagged for Level 5 Trainer status.
+                         </p>
+                       </div>
+                     </div>
 
-                    {/* Review list */}
-                    <div className="space-y-3 pt-2">
-                      <h4 className="text-xs font-bold text-slate-850 border-b pb-1 flex items-center gap-1">
-                        <List className="w-4 h-4 text-slate-500" />
-                        <span>Interactive Question paper review:</span>
-                      </h4>
+                     <div className="space-y-3 pt-2">
+                       <h4 className="text-xs font-bold text-slate-850 border-b pb-1.5 flex items-center gap-1">
+                         <List className="w-4 h-4 text-slate-500" />
+                         <span>Syllabus review scorecard details:</span>
+                       </h4>
 
-                      <div className="space-y-4">
-                        {quizQuestions.map((q, idx) => {
-                          const chosenIdx = selectedAnswers[q.id];
-                          const isCorrect = chosenIdx === q.correctAnswerIdx;
+                       <div className="space-y-4">
+                         {quizQuestions.map((q, idx) => {
+                           const chosenIdx = selectedAnswers[q.id];
+                           const isCorrect = chosenIdx === q.correctAnswerIdx;
 
-                          return (
-                            <div key={q.id} className="p-4 rounded-xl border border-slate-150 space-y-2 text-xs">
-                              <div className="flex items-start gap-2">
-                                <span className="font-bold font-mono text-slate-400 mt-0.5">{idx + 1}.</span>
-                                <p className="font-bold text-slate-900 leading-snug">{q.question}</p>
-                              </div>
+                           return (
+                             <div key={q.id} className="p-4 rounded-xl border border-slate-150 space-y-2 text-xs bg-slate-50/50">
+                               <div className="flex items-start gap-2">
+                                 <span className="font-bold font-mono text-slate-400 mt-0.5">{idx + 1}.</span>
+                                 <div>
+                                   <p className="font-extrabold text-slate-900 leading-snug">{q.question}</p>
+                                   {q.questionUrdu && (
+                                     <p className="text-xs text-rose-800 font-extrabold mt-0.5 text-right rtl leading-tight">{q.questionUrdu}</p>
+                                   )}
+                                 </div>
+                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-5 mt-1 text-[11px]">
-                                {q.options.map((opt, oIdx) => {
-                                  let bgClass = "bg-white text-slate-600 border border-slate-200";
-                                  if (oIdx === q.correctAnswerIdx) {
-                                    bgClass = "bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold";
-                                  } else if (oIdx === chosenIdx && !isCorrect) {
-                                    bgClass = "bg-red-50 text-red-900 border border-red-300";
-                                  }
+                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-5 mt-1 text-[11px]">
+                                 {q.options.map((opt, oIdx) => {
+                                   let bgClass = "bg-white text-slate-605 border border-slate-200";
+                                   if (oIdx === q.correctAnswerIdx) {
+                                     bgClass = "bg-emerald-50 text-emerald-990 border border-emerald-300 font-bold";
+                                   } else if (oIdx === chosenIdx && !isCorrect) {
+                                     bgClass = "bg-rose-50 text-rose-900 border border-rose-300 font-bold";
+                                   }
 
-                                  return (
-                                    <div key={oIdx} className={`p-2 rounded-lg flex items-center justify-between ${bgClass}`}>
-                                      <span>{opt}</span>
-                                      {oIdx === q.correctAnswerIdx && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />}
-                                      {oIdx === chosenIdx && !isCorrect && <X className="w-3.5 h-3.5 text-red-600 shrink-0 ml-1" />}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                                   return (
+                                     <div key={oIdx} className={`p-2 rounded-lg flex items-center justify-between ${bgClass}`}>
+                                       <span>{opt}</span>
+                                       {oIdx === q.correctAnswerIdx && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />}
+                                       {oIdx === chosenIdx && !isCorrect && <X className="w-3.5 h-3.5 text-rose-600 shrink-0 ml-1" />}
+                                     </div>
+                                   );
+                                 })}
+                               </div>
+                             </div>
+                           );
+                         })}
+                       </div>
+                     </div>
 
-                    {/* Commit Action buttons */}
-                    <div className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center bg-slate-50 border p-4 rounded-xl text-xs gap-4">
-                      <button
-                        onClick={() => setQuizInProgress(false)}
-                        className="text-slate-500 font-semibold uppercase tracking-wider text-[10px] hover:text-slate-800 transition-colors cursor-pointer"
-                      >
-                        ← Abandon Marks and Exit
-                      </button>
-                      
-                      <button
-                        onClick={handleCommitResult}
-                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-slate-900 font-black uppercase tracking-wider rounded-xl flex items-center space-x-2 border border-emerald-500/30 transition-all cursor-pointer shadow-m"
-                      >
-                        <CheckCircle className="w-4 h-4 text-slate-900" />
-                        <span>Commit Grade to Database & Sync Skills</span>
-                      </button>
-                    </div>
+                     <div className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center bg-slate-50 border p-4 rounded-xl text-xs gap-4 font-semibold">
+                       <button
+                         onClick={() => setQuizInProgress(false)}
+                         className="text-slate-500 font-semibold uppercase tracking-wider text-[10px] hover:text-slate-800 cursor-pointer"
+                       >
+                         ← Abandon Marks and Exit
+                       </button>
+                       
+                       <button
+                         onClick={handleCommitResult}
+                         className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 border border-emerald-600 text-slate-900 font-extrabold uppercase tracking-wider rounded-xl flex items-center space-x-2 transition-all cursor-pointer shadow-m"
+                       >
+                         <CheckCircle className="w-4 h-4 text-slate-900" />
+                         <span>Commit Grade & Sync Skills</span>
+                       </button>
+                     </div>
                   </div>
                 );
               }
 
               return (
                 <div className="bg-white border-2 border-slate-900 rounded-2xl shadow-xl p-6 md:p-8 space-y-6">
-                  {/* Participant and Timer row */}
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-3">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-emerald-600 font-extrabold uppercase bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">ACTIVE CANDIDATE EXAM APPLICANT</span>
-                      <h4 className="text-sm font-extrabold text-slate-900">{applicant?.name}</h4>
-                      <p className="text-[10px] text-slate-400 font-mono">ID: {applicant?.code} • {applicant?.designation} ({applicant?.unit})</p>
+                      <span className="text-[10px] text-emerald-900 font-bold uppercase bg-emerald-105-50 px-2.5 py-1 rounded border border-emerald-200 bg-emerald-50">ACTIVE QUALITY CANDIDATE EXAM</span>
+                      <h4 className="text-sm font-extrabold text-slate-900 mt-1">{applicant?.name}</h4>
+                      <p className="text-[10px] text-slate-450 font-mono">ID: {applicant?.code} • {applicant?.designation}</p>
                     </div>
 
                     <div className="flex items-center space-x-4">
-                      {/* Timer */}
-                      <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-100 rounded-xl font-mono text-xs font-bold">
-                        <Clock className="w-3.5 h-3.5 text-red-600 animate-pulse" />
+                      <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl font-mono text-xs font-bold">
+                        <Clock className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
                         <span>{formattedTime}</span>
                       </div>
 
-                      {/* Question Tracker */}
                       <span className="text-xs font-mono font-bold text-slate-650 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
                         Q: {currentQIndex + 1} / {quizQuestions.length}
                       </span>
                     </div>
                   </div>
 
-                  {/* Question and Option list */}
-                  <div className="space-y-5 py-4 min-h-60">
-                    {/* Visual Progress Line */}
+                  {/* Question Viewport */}
+                  <div className="space-y-5 py-4 min-h-60" id="mcq-question-card">
                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                       <div 
                         className="bg-emerald-500 h-full transition-all duration-300"
@@ -1012,8 +937,13 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
 
                     <div className="space-y-4">
                       <div className="flex items-start gap-3">
-                        <span className="text-xs font-extrabold font-mono text-slate-400 mt-0.5">QUESTION 0{currentQIndex + 1}:</span>
-                        <h4 className="text-sm font-extrabold text-slate-900 leading-snug">{currentQuestion.question}</h4>
+                        <span className="text-xs font-extrabold font-mono text-slate-400 mt-1 shrink-0">QUESTION:</span>
+                        <div>
+                          <h4 className="text-base font-extrabold text-slate-900 leading-snug">{currentQuestion.question}</h4>
+                          {currentQuestion.questionUrdu && (
+                            <p className="text-sm text-rose-800 font-black mt-1.5 leading-snug text-right rtl" style={{ direction: 'rtl' }}>{currentQuestion.questionUrdu}</p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 gap-3 pl-8">
@@ -1023,13 +953,13 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                             <button
                               key={oIdx}
                               onClick={() => setSelectedAnswers(prev => ({ ...prev, [currentQuestion.id]: oIdx }))}
-                              className={`w-full text-left px-4 py-3 rounded-xl text-xs transition-all border flex items-center justify-between cursor-pointer ${
+                              className={`w-full text-left px-4 py-3.5 rounded-xl text-xs transition-all border flex items-center justify-between cursor-pointer ${
                                 isSelected 
                                   ? 'bg-emerald-50 text-emerald-990 font-bold border-emerald-500 shadow-sm ring-1 ring-emerald-400' 
-                                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-201 hover:border-slate-300'
+                                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-205 hover:border-slate-350'
                               }`}
                             >
-                              <span>{opt}</span>
+                              <span className="font-semibold text-slate-850">{opt}</span>
                               <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-3 ${
                                 isSelected ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300'
                               }`}>
@@ -1043,7 +973,7 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
                   </div>
 
                   {/* Flow controls */}
-                  <div className="border-t pt-5 flex justify-between items-center">
+                  <div className="border-t pt-5 flex justify-between items-center text-xs">
                     <button
                       onClick={() => currentQIndex > 0 ? setCurrentQIndex(prev => prev - 1) : null}
                       disabled={currentQIndex === 0}
@@ -1063,7 +993,7 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
 
                     {currentQIndex < quizQuestions.length - 1 ? (
                       <button
-                        onClick={() => selectedAnswers[currentQuestion.id] !== undefined ? setCurrentQIndex(prev => prev + 1) : alert("Please select an answer to advance!")}
+                        onClick={() => selectedAnswers[currentQuestion.id] !== undefined ? setCurrentQIndex(prev => prev + 1) : alert("Please select an option to advance!")}
                         className={`px-4 py-2 bg-slate-900 border border-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shadow cursor-pointer`}
                       >
                         <span>Next</span>
@@ -1089,6 +1019,255 @@ export const PostAssessment: React.FC<PostAssessmentProps> = ({
               );
             })()
           )}
+        </div>
+      )}
+
+      {/* RENDER MCQ ADMINISTRATION DESK (FULL CRUD INSTRUCTIONS) */}
+      {activeSubTab === 'mcq-admin' && (
+        <div className="space-y-6" id="mcq-admin-desk">
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-950 flex items-center gap-1.5 uppercase leading-none">
+                <span>🛡️</span>
+                <span>AGI Denim MCQ Examination Pool manager</span>
+              </h3>
+              <p className="text-xs text-slate-550 mt-1">Authorized admin hub to edit, delete, and authorize exam questions tied to training indices.</p>
+            </div>
+
+            <button
+              onClick={handleOpenAddQuestion}
+              className="px-4 py-2 bg-slate-950 hover:bg-slate-850 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md text-center"
+            >
+              <Plus className="w-4 h-4 text-white" />
+              <span>Create New MCQ</span>
+            </button>
+          </div>
+
+          {/* Catalog Lists */}
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center text-xs text-slate-400 font-bold tracking-wider uppercase">
+              <span>EXAMINATION QUESTIONS ({questions.length})</span>
+              <span>FILTER: BY COURSE ID OR DEFAULT PRESETS</span>
+            </div>
+
+            <div className="divide-y divide-slate-100 bg-white">
+              {questions.map((q, idx) => {
+                const targetCrs = courses.find(c => c.id === q.courseId);
+                return (
+                  <div key={q.id} className="p-5 flex flex-col md:flex-row justify-between items-start gap-4 hover:bg-slate-50/50 transition-colors">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-[9px] font-extrabold bg-slate-950 text-white px-2 py-0.5 rounded leading-none shadow-sm">{q.id}</span>
+                        <span className="text-[10px] font-mono text-indigo-700 font-bold uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded leading-none border border-indigo-150">
+                          {q.courseId === 'default' ? 'General Baseline' : `Course: ${q.courseId} (${targetCrs?.name || "Unknown"})`}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="font-extrabold text-slate-950 text-sm leading-tight">{idx + 1}. {q.question}</p>
+                        {q.questionUrdu && (
+                          <p className="text-xs text-rose-800 font-extrabold italic pr-1 tracking-tight" style={{ direction: 'rtl' }}>
+                            {q.questionUrdu}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Options breakdown */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                        {q.options.map((opt, oIdx) => (
+                          <div 
+                            key={oIdx} 
+                            className={`p-2 rounded-lg border text-[11px] flex justify-between items-center ${
+                              oIdx === q.correctAnswerIdx 
+                                ? 'bg-emerald-50 text-emerald-990 border-emerald-300 font-bold' 
+                                : 'bg-slate-50 text-slate-600 border-slate-150'
+                            }`}
+                          >
+                            <span>Choice {String.fromCharCode(65 + oIdx)}: {opt}</span>
+                            {oIdx === q.correctAnswerIdx && (
+                              <span className="text-[9px] uppercase tracking-wide bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-black font-sans leading-none flex items-center gap-0.5">
+                                <Check className="w-3 h-3 text-emerald-700" /> Key
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 shrink-0 md:self-center">
+                      <button
+                        onClick={() => handleOpenEditQuestion(q)}
+                        className="p-1 px-3 border border-slate-205 rounded-lg bg-white hover:bg-slate-100 text-[10.5px] font-bold text-slate-700 flex items-center gap-1 cursor-pointer shadow-sm"
+                        title="Edit Question Prompts"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteQuestion(q.id, q.question)}
+                        className="p-1 px-3 border border-slate-201 hover:border-rose-201 rounded-lg bg-rose-50 hover:bg-rose-100 text-[10.5px] font-bold text-rose-600 flex items-center gap-1 cursor-pointer"
+                        title="Delete Question"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {questions.length === 0 && (
+                <div className="p-10 text-center text-slate-400 text-xs">No questions loaded in database pool. Run reset to load baseline indices.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUESTION MODAL (Unified Add/Edit layout) */}
+      {showQuestionModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all flex flex-col my-8 max-h-[90vh]">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-900 text-white rounded-t-2xl">
+              <div>
+                <span className="text-[9px] font-mono tracking-wider font-bold text-amber-400 uppercase leading-none block">AGI DENIM EXAMINATION POOL</span>
+                <h2 className="text-base font-bold mt-1">
+                  {editingQuestion ? `✏️ Adjust Question - ${editingQuestion.id}` : '➕ Add Examination Question Card'}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setShowQuestionModal(false)}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuestionSubmit} className="p-5 overflow-y-auto space-y-4 text-slate-900 bg-white">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-755">Target Training Index / Course *</label>
+                <p className="text-[10px] text-slate-400">Questions will launch during assessments of the selected course, or general baseline queries.</p>
+                <select
+                  value={formQ.courseId}
+                  onChange={e => setFormQ({ ...formQ, courseId: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-950 rounded-lg focus:outline-none focus:border-slate-800 cursor-pointer bg-white"
+                  required
+                >
+                  <option value="default">General Baseline Core Questions</option>
+                  {courses.map(crs => (
+                    <option key={crs.id} value={crs.id}>{crs.id} - {crs.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-755">Question Prompt (English) *</label>
+                <textarea
+                  rows={2}
+                  placeholder="Why is continuous learning important on the shift-floor?"
+                  value={formQ.question}
+                  onChange={e => setFormQ({ ...formQ, question: e.target.value })}
+                  className="w-full px-3 py-1.5 text-xs text-slate-950 border border-slate-300 rounded-lg focus:outline-none focus:border-slate-800"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-755">Question (Urdu Optional Translation)</label>
+                <textarea
+                  rows={2}
+                  placeholder="کام کی جگہ پر مسلسل سیکھنا کیوں ضروری ہے؟"
+                  value={formQ.questionUrdu}
+                  onChange={e => setFormQ({ ...formQ, questionUrdu: e.target.value })}
+                  className="w-full px-3 py-1.5 text-xs text-slate-950 border border-slate-300 rounded-lg focus:outline-none focus:border-slate-800 text-right rtl"
+                  style={{ direction: 'rtl' }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-755">Four Multiple-Choice Options *</label>
+                
+                <div className="grid grid-cols-1 gap-2 bg-slate-50 p-3.5 rounded-xl border border-slate-150">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-400">A</span>
+                    <input
+                      type="text"
+                      placeholder="It helps improve knowledge and skills"
+                      value={formQ.optA}
+                      onChange={e => setFormQ({ ...formQ, optA: e.target.value })}
+                      className="flex-1 px-2.5 py-1 text-xs text-slate-950 border border-slate-300 rounded focus:outline-none bg-white font-semibold"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-400">B</span>
+                    <input
+                      type="text"
+                      placeholder="It increases workload"
+                      value={formQ.optB}
+                      onChange={e => setFormQ({ ...formQ, optB: e.target.value })}
+                      className="flex-1 px-2.5 py-1 text-xs text-slate-950 border border-slate-300 rounded focus:outline-none bg-white font-semibold"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-400">C</span>
+                    <input
+                      type="text"
+                      placeholder="It creates confusion"
+                      value={formQ.optC}
+                      onChange={e => setFormQ({ ...formQ, optC: e.target.value })}
+                      className="flex-1 px-2.5 py-1 text-xs text-slate-950 border border-slate-300 rounded focus:outline-none bg-white font-semibold"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-400">D</span>
+                    <input
+                      type="text"
+                      placeholder="It has no impact"
+                      value={formQ.optD}
+                      onChange={e => setFormQ({ ...formQ, optD: e.target.value })}
+                      className="flex-1 px-2.5 py-1 text-xs text-slate-950 border border-slate-300 rounded focus:outline-none bg-white font-semibold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-755">Indicate Correct Answer Option Key *</label>
+                <select
+                  value={formQ.correctAnswerIdx}
+                  onChange={e => setFormQ({ ...formQ, correctAnswerIdx: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-950 rounded-lg focus:outline-none focus:border-slate-800 cursor-pointer bg-white font-mono font-bold"
+                  required
+                >
+                  <option value={0}>Option A (First Choice)</option>
+                  <option value={1}>Option B (Second Choice)</option>
+                  <option value={2}>Option C (Third Choice)</option>
+                  <option value={3}>Option D (Fourth Choice)</option>
+                </select>
+              </div>
+
+              <div className="border-t border-slate-100 pt-4 flex justify-end space-x-2 mt-4 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionModal(false)}
+                  className="px-4 py-2 hover:bg-slate-100 text-slate-500 font-semibold rounded-xl text-xs cursor-pointer animate-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-slate-950 hover:bg-slate-850 border border-slate-950 text-white font-bold rounded-xl text-xs cursor-pointer shadow-m text-center"
+                >
+                  {editingQuestion ? 'Save Question' : 'Authorize Question'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

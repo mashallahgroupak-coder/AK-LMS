@@ -1,22 +1,28 @@
 import React, { useState } from 'react';
 import { Course } from '../types';
-import { BookOpen, Search, Plus, SlidersHorizontal, Layers, GraduationCap, Clock, HelpCircle, X } from 'lucide-react';
+import { BookOpen, Search, Plus, SlidersHorizontal, Layers, GraduationCap, Clock, HelpCircle, X, Edit3, Trash2 } from 'lucide-react';
 
 interface TrainingLibraryProps {
   courses: Course[];
   onAddCourse: (course: Course) => void;
+  onEditCourse: (course: Course) => void;
+  onDeleteCourse: (id: string) => void;
 }
 
 export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
   courses,
-  onAddCourse
+  onAddCourse,
+  onEditCourse,
+  onDeleteCourse
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('All');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
-  // New course state
-  const [newCrs, setNewCrs] = useState({
+  // Unified modal state
+  const [formCrs, setFormCrs] = useState({
+    id: '',
     name: '',
     trainer: 'Subject Matter Expert',
     department: 'Quality',
@@ -27,31 +33,10 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
     durationMinutes: 180
   });
 
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const topicsArr = newCrs.topicsConcat.split(',').map(t => t.trim()).filter(t => t !== '');
-    const courseId = `TRG-${(courses.length + 1).toString().padStart(2, '0')}`;
-    
-    const minutes = Number(newCrs.durationMinutes);
-    const hours = Number((minutes / 60).toFixed(2));
-    
-    const course: Course = {
-      id: courseId,
-      name: newCrs.name,
-      trainer: newCrs.trainer,
-      department: newCrs.department,
-      frequency: newCrs.frequency,
-      topics: topicsArr.length > 0 ? topicsArr : ["Overview guidelines", "Standard compliance checklists"],
-      scope: newCrs.scope,
-      method: newCrs.method,
-      durationHours: hours,
-      durationMinutes: minutes
-    };
-
-    onAddCourse(course);
-    setShowAddModal(false);
-    // Reset
-    setNewCrs({
+  const handleOpenAdd = () => {
+    setEditingCourse(null);
+    setFormCrs({
+      id: '',
       name: '',
       trainer: 'Subject Matter Expert',
       department: 'Quality',
@@ -61,6 +46,72 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
       method: 'Lecture/Presentation',
       durationMinutes: 180
     });
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (crs: Course) => {
+    setEditingCourse(crs);
+    setFormCrs({
+      id: crs.id,
+      name: crs.name,
+      trainer: crs.trainer,
+      department: crs.department,
+      frequency: crs.frequency,
+      topicsConcat: crs.topics.join(', '),
+      scope: crs.scope,
+      method: crs.method,
+      durationMinutes: crs.durationMinutes || (crs.durationHours * 60)
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`⚠️ Admin Command: Are you sure you want to delete the course "${name}" (ID: ${id})? This is irreversible and will purge associated skill records.`)) {
+      onDeleteCourse(id);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const topicsArr = formCrs.topicsConcat.split(',').map(t => t.trim()).filter(t => t !== '');
+    const minutes = Number(formCrs.durationMinutes);
+    const hours = Number((minutes / 60).toFixed(2));
+
+    if (editingCourse) {
+      // Editing existing course
+      const updatedCourse: Course = {
+        id: editingCourse.id,
+        name: formCrs.name,
+        trainer: formCrs.trainer,
+        department: formCrs.department,
+        frequency: formCrs.frequency,
+        topics: topicsArr.length > 0 ? topicsArr : ["Overview guidelines", "Standard compliance checklists"],
+        scope: formCrs.scope,
+        method: formCrs.method,
+        durationHours: hours,
+        durationMinutes: minutes
+      };
+      onEditCourse(updatedCourse);
+    } else {
+      // Adding new course
+      const nextNum = courses.length > 0 ? Math.max(...courses.map(c => parseInt(c.id.replace(/[^\d]/g, '')) || 0)) + 1 : 1;
+      const courseId = `TRG-${nextNum.toString().padStart(2, '0')}`;
+      const newCourse: Course = {
+        id: courseId,
+        name: formCrs.name,
+        trainer: formCrs.trainer,
+        department: formCrs.department,
+        frequency: formCrs.frequency,
+        topics: topicsArr.length > 0 ? topicsArr : ["Overview guidelines", "Standard compliance checklists"],
+        scope: formCrs.scope,
+        method: formCrs.method,
+        durationHours: hours,
+        durationMinutes: minutes
+      };
+      onAddCourse(newCourse);
+    }
+
+    setShowModal(false);
   };
 
   const filteredCourses = courses.filter(crs => {
@@ -75,11 +126,14 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
       {/* Upper header */}
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold font-sans text-slate-900">Training Library / catalog</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Syllabi lists and courses authorized under Artistic Garment Industries (AQL/ISO checklist standards).</p>
+          <h2 className="text-xl font-bold font-sans text-slate-900 flex items-center gap-2">
+            <span>🛡️</span>
+            <span>Training Curriculum Syllabus manager</span>
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">Syllabi lists and courses authorized under Artistic Garment Industries. Admins can edit & delete any syllabus.</p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={handleOpenAdd}
           className="px-4 py-2 bg-slate-900 border border-slate-950 hover:bg-slate-800 active:bg-slate-950 text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 cursor-pointer"
           id="btn-add-course"
         >
@@ -105,7 +159,7 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
           <select
             value={selectedMethod}
             onChange={e => setSelectedMethod(e.target.value)}
-            className="px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none cursor-pointer"
+            className="px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none cursor-pointer text-slate-800 font-medium"
           >
             <option value="All">All Instruction Methods</option>
             <option value="Lecture/Presentation">Lecture/Presentation</option>
@@ -120,20 +174,35 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
         {filteredCourses.map(crs => (
           <div 
             key={crs.id} 
-            className="bg-white border border-slate-150 p-5 rounded-2xl shadow-[0_2px_6px_rgba(0,0,0,0.02)] hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-4"
+            className="bg-white border border-slate-150 p-5 rounded-2xl shadow-[0_2px_6px_rgba(0,0,0,0.02)] hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-4 relative group"
           >
             <div className="space-y-2.5">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-mono px-2 py-0.5 bg-slate-950 text-white rounded text-[9px] font-bold">
                   {crs.id}
                 </span>
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
-                  {crs.frequency}
-                </span>
+                
+                {/* Admin direct edit controls floating in each card */}
+                <div className="flex items-center gap-1.5 z-10">
+                  <button
+                    onClick={() => handleOpenEdit(crs)}
+                    className="p-1.5 hover:bg-amber-100 text-amber-700 hover:text-amber-800 rounded-lg transition-colors cursor-pointer"
+                    title={`Edit ${crs.name}`}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(crs.id, crs.name)}
+                    className="p-1.5 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded-lg transition-colors cursor-pointer"
+                    title={`Delete ${crs.name}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-sky-650 transition-colors">
+                <h3 className="text-sm font-bold text-slate-905 leading-snug">
                   {crs.name}
                 </h3>
                 <div className="flex items-center space-x-1 text-[11px] text-slate-400">
@@ -144,11 +213,14 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
 
               {/* Badges details layout */}
               <div className="flex flex-wrap gap-1">
-                <span className="text-[9px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-semibold font-mono">
+                <span className="text-[9px] bg-slate-100 text-slate-705 px-2 py-0.5 rounded-full font-semibold font-mono">
                   {crs.scope}
                 </span>
                 <span className="text-[9px] bg-sky-50 text-sky-850 px-2 py-0.5 rounded-full font-semibold font-mono">
                   {crs.method}
+                </span>
+                <span className="text-[9px] bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full font-semibold font-mono">
+                  {crs.frequency}
                 </span>
               </div>
 
@@ -163,7 +235,7 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-50 flex justify-between items-center text-xs">
+            <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
               <div className="flex flex-col text-slate-500 font-mono text-[11px] space-y-0.5">
                 <div className="flex items-center space-x-1.5">
                   <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
@@ -173,8 +245,8 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
                   Equivalent to {crs.durationHours} hrs
                 </div>
               </div>
-              <span className="text-[10px] text-emerald-600 font-semibold font-mono uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded leading-none">
-                 Approved
+              <span className="text-[11px] text-emerald-600 font-extrabold font-mono uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded leading-none">
+                 ✓ Active
               </span>
             </div>
           </div>
@@ -187,54 +259,56 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
         )}
       </div>
 
-      {/* MODAL: Add Course subjects */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-xl border border-slate-200">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+      {/* MODAL: Unified Add / Edit Course subject */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-900 text-white">
               <div>
-                <h3 className="text-sm font-mono tracking-wider font-bold text-slate-400 uppercase leading-none font-sans">Artistic Denim Curriculum</h3>
-                <h2 className="text-base font-bold text-slate-900 mt-1">Register New Training Curriculum</h2>
+                <span className="text-[9px] font-mono tracking-widest font-bold text-amber-400 uppercase leading-none block">AGI DENIM Admin Desk</span>
+                <h2 className="text-base font-bold mt-1">
+                  {editingCourse ? `✏️ Modify Course - ${editingCourse.id}` : '➕ Register New Training Curriculum'}
+                </h2>
               </div>
               <button 
-                onClick={() => setShowAddModal(false)}
-                className="p-1 hover:bg-slate-200 text-slate-400 rounded-lg cursor-pointer animate-none"
+                onClick={() => setShowModal(false)}
+                className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5 shrink-0" />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700">Curriculum Subject Title *</label>
+                <label className="text-xs font-semibold text-slate-755">Curriculum Subject Title *</label>
                 <input
                   type="text"
                   placeholder="e.g. Defect Calibration Standard Checklist"
-                  value={newCrs.name}
-                  onChange={e => setNewCrs({ ...newCrs, name: e.target.value })}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-slate-800"
+                  value={formCrs.name}
+                  onChange={e => setFormCrs({ ...formCrs, name: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-slate-800 text-slate-900"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Course Department Target *</label>
+                  <label className="text-xs font-semibold text-slate-755">Course Department Target *</label>
                   <input
                     type="text"
-                    value={newCrs.department}
-                    onChange={e => setNewCrs({ ...newCrs, department: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none"
+                    value={formCrs.department}
+                    onChange={e => setFormCrs({ ...formCrs, department: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:border-slate-800"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Frequency Track *</label>
+                  <label className="text-xs font-semibold text-slate-755">Frequency Track *</label>
                   <select
-                    value={newCrs.frequency}
-                    onChange={e => setNewCrs({ ...newCrs, frequency: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none cursor-pointer"
+                    value={formCrs.frequency}
+                    onChange={e => setFormCrs({ ...formCrs, frequency: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:border-slate-800 cursor-pointer"
                     required
                   >
                     <option value="Biannually">Biannually</option>
@@ -246,24 +320,24 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700">Syllabus Outlines (Comma separated values) *</label>
+                <label className="text-xs font-semibold text-slate-755">Syllabus Outlines (Comma separated values) *</label>
                 <textarea
                   rows={2}
                   placeholder="Light box calibration specifications, major vs minor defects classification, light wavelengths..."
-                  value={newCrs.topicsConcat}
-                  onChange={e => setNewCrs({ ...newCrs, topicsConcat: e.target.value })}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-slate-800"
+                  value={formCrs.topicsConcat}
+                  onChange={e => setFormCrs({ ...formCrs, topicsConcat: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:border-slate-800"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Scope Type *</label>
+                  <label className="text-xs font-semibold text-slate-755">Scope Type *</label>
                   <select
-                    value={newCrs.scope}
-                    onChange={e => setNewCrs({ ...newCrs, scope: e.target.value as any })}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-slate-800 cursor-pointer"
+                    value={formCrs.scope}
+                    onChange={e => setFormCrs({ ...formCrs, scope: e.target.value as any })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:border-slate-800 cursor-pointer"
                     required
                   >
                     <option value="Professional/Technical">Professional/Technical</option>
@@ -274,11 +348,11 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Instruction Method *</label>
+                  <label className="text-xs font-semibold text-slate-755">Instruction Method *</label>
                   <select
-                    value={newCrs.method}
-                    onChange={e => setNewCrs({ ...newCrs, method: e.target.value as any })}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-slate-800 cursor-pointer"
+                    value={formCrs.method}
+                    onChange={e => setFormCrs({ ...formCrs, method: e.target.value as any })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:border-slate-800 cursor-pointer"
                     required
                   >
                     <option value="Lecture/Presentation">Lecture/Presentation</option>
@@ -291,45 +365,45 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Course Duration (Minutes) *</label>
+                  <label className="text-xs font-semibold text-slate-755">Course Duration (Minutes) *</label>
                   <input
                     type="number"
                     min="10"
                     max="1440"
-                    value={newCrs.durationMinutes}
-                    onChange={e => setNewCrs({ ...newCrs, durationMinutes: Number(e.target.value) })}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800"
+                    value={formCrs.durationMinutes}
+                    onChange={e => setFormCrs({ ...formCrs, durationMinutes: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:border-slate-800"
                     required
                   />
                   <p className="text-[10px] text-slate-400">
-                    Equivalent to {Number((newCrs.durationMinutes / 60).toFixed(2))} hours
+                    Equivalent to {Number((formCrs.durationMinutes / 60).toFixed(2))} hours
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Course Facilitator *</label>
+                  <label className="text-xs font-semibold text-slate-755">Course Facilitator *</label>
                   <input
                     type="text"
-                    value={newCrs.trainer}
-                    onChange={e => setNewCrs({ ...newCrs, trainer: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none bg-slate-50"
+                    value={formCrs.trainer}
+                    onChange={e => setFormCrs({ ...formCrs, trainer: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:border-slate-800"
                     required
                   />
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100">
+              <div className="pt-3 flex justify-end space-x-2 border-t border-slate-100 mt-4">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 hover:bg-slate-100 text-slate-500 font-semibold rounded-xl text-xs cursor-pointer animate-none"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 hover:bg-slate-100 text-slate-500 font-semibold rounded-xl text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-slate-900 border border-slate-950 text-white font-bold rounded-xl text-xs cursor-pointer"
+                  className="px-5 py-2 bg-slate-950 border border-slate-950 text-white font-bold rounded-xl text-xs cursor-pointer shadow hover:bg-slate-850"
                 >
-                  Authorize Syllabus
+                  {editingCourse ? 'Save Changes' : 'Authorize Syllabus'}
                 </button>
               </div>
             </form>

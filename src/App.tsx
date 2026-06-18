@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getLMSData, saveLMSData, INITIAL_COURSES, INITIAL_EMPLOYEES, INITIAL_EVENTS, INITIAL_SKILLS, INITIAL_INDIVIDUAL_PRE_ASSESSMENTS, INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS, INITIAL_FEEDBACKS, INITIAL_POST_MARKS } from './data';
-import { Course, Employee, TrainingEvent, SkillRating, IndividualPreAssessment, DepartmentalPreAssessment, PostAssessmentFeedback, PostAssessmentMark } from './types';
+import { getLMSData, saveLMSData, INITIAL_COURSES, INITIAL_EMPLOYEES, INITIAL_EVENTS, INITIAL_SKILLS, INITIAL_INDIVIDUAL_PRE_ASSESSMENTS, INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS, INITIAL_FEEDBACKS, INITIAL_POST_MARKS, INITIAL_QUESTIONS } from './data';
+import { Course, Employee, TrainingEvent, SkillRating, IndividualPreAssessment, DepartmentalPreAssessment, PostAssessmentFeedback, PostAssessmentMark, MCQQuestion } from './types';
 import { DashboardOverview } from './components/DashboardOverview';
 import { PreAssessment } from './components/PreAssessment';
 import { SkillMatrix } from './components/SkillMatrix';
@@ -64,6 +64,17 @@ export default function App() {
             for (const pm of INITIAL_POST_MARKS) {
               await setDoc(doc(firestoreDb, 'postMarks', pm.id), pm);
             }
+            for (const q of INITIAL_QUESTIONS) {
+              await setDoc(doc(firestoreDb, 'questions', q.id), q);
+            }
+          } else {
+            // Guarantee questions collection exists if course are there but questions empty
+            const questionsSnap = await getDocs(collection(firestoreDb, 'questions'));
+            if (questionsSnap.empty) {
+              for (const q of INITIAL_QUESTIONS) {
+                await setDoc(doc(firestoreDb, 'questions', q.id), q);
+              }
+            }
           }
         } catch (err) {
           handleFirestoreError(err, OperationType.GET, 'init-seed');
@@ -111,6 +122,7 @@ export default function App() {
     handleSnap('departmentalPre', 'departmentalPre', d => d);
     handleSnap('feedbacks', 'feedbacks', d => d);
     handleSnap('postMarks', 'postMarks', d => d);
+    handleSnap('questions', 'questions', d => d);
 
     return () => {
       unsubscribes.forEach(unsub => unsub());
@@ -124,6 +136,7 @@ export default function App() {
       return next;
     });
   };
+
 
   // State handles
   const handleAddCourse = async (course: Course) => {
@@ -140,6 +153,110 @@ export default function App() {
       }));
     }
   };
+
+  const handleEditCourse = async (course: Course) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'courses', course.id), course);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `courses/${course.id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        courses: prev.courses.map(c => c.id === course.id ? course : c)
+      }));
+    }
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    if (user) {
+      try {
+        await deleteDoc(doc(firestoreDb, 'courses', id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `courses/${id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        courses: prev.courses.filter(c => c.id !== id),
+        // Clean up skills rating associated with course
+        skills: prev.skills.filter(s => s.courseId !== id)
+      }));
+    }
+  };
+
+  const handleEditEvent = async (event: TrainingEvent) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'events', event.id), event);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `events/${event.id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        events: prev.events.map(e => e.id === event.id ? event : e)
+      }));
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (user) {
+      try {
+        await deleteDoc(doc(firestoreDb, 'events', id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `events/${id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        events: prev.events.filter(e => e.id !== id),
+        postMarks: prev.postMarks.filter(pm => pm.trainingEventId !== id),
+        feedbacks: prev.feedbacks.filter(fb => fb.trainingEventId !== id)
+      }));
+    }
+  };
+
+  const handleSaveQuestion = async (question: MCQQuestion) => {
+    if (user) {
+      try {
+        await setDoc(doc(firestoreDb, 'questions', question.id), question);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `questions/${question.id}`);
+      }
+    } else {
+      updateDb(prev => {
+        const index = prev.questions ? prev.questions.findIndex(q => q.id === question.id) : -1;
+        const questionsList = prev.questions ? [...prev.questions] : [];
+        if (index >= 0) {
+          questionsList[index] = question;
+        } else {
+          questionsList.push(question);
+        }
+        return {
+          ...prev,
+          questions: questionsList
+        };
+      });
+    }
+  };
+
+  const handleDeleteQuestion = async (id: string) => {
+    if (user) {
+      try {
+        await deleteDoc(doc(firestoreDb, 'questions', id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `questions/${id}`);
+      }
+    } else {
+      updateDb(prev => ({
+        ...prev,
+        questions: (prev.questions || []).filter(q => q.id !== id)
+      }));
+    }
+  };
+
 
   const handleAddIndividualPre = async (tna: IndividualPreAssessment) => {
     if (user) {
@@ -467,6 +584,7 @@ export default function App() {
           await deleteCollection('departmentalPre');
           await deleteCollection('feedbacks');
           await deleteCollection('postMarks');
+          await deleteCollection('questions');
 
           // Seed baseline initial defaults
           for (const course of INITIAL_COURSES) {
@@ -494,6 +612,9 @@ export default function App() {
           for (const pm of INITIAL_POST_MARKS) {
             await setDoc(doc(firestoreDb, 'postMarks', pm.id), pm);
           }
+          for (const q of INITIAL_QUESTIONS) {
+            await setDoc(doc(firestoreDb, 'questions', q.id), q);
+          }
         } catch (err) {
           console.error("Error resetting Firestore database:", err);
           alert("Failed to reset Firestore database.");
@@ -510,6 +631,7 @@ export default function App() {
           departmentalPre: INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS,
           feedbacks: INITIAL_FEEDBACKS,
           postMarks: INITIAL_POST_MARKS,
+          questions: INITIAL_QUESTIONS,
         };
         setDb(defaultDb);
         saveLMSData(defaultDb);
@@ -623,6 +745,8 @@ export default function App() {
                     employees={db.employees}
                     events={db.events}
                     onAddEvent={handleAddEvent}
+                    onEditEvent={handleEditEvent}
+                    onDeleteEvent={handleDeleteEvent}
                     onUpdateEventStatus={handleUpdateEventStatus}
                   />
                 )}
@@ -631,6 +755,8 @@ export default function App() {
                   <TrainingLibrary 
                     courses={db.courses}
                     onAddCourse={handleAddCourse}
+                    onEditCourse={handleEditCourse}
+                    onDeleteCourse={handleDeleteCourse}
                   />
                 )}
 
@@ -669,8 +795,11 @@ export default function App() {
                     events={db.events}
                     feedbacks={db.feedbacks}
                     postMarks={db.postMarks}
+                    questions={db.questions || []}
                     onAddFeedback={handleAddFeedback}
                     onSaveMarks={handleSaveMarks}
+                    onSaveQuestion={handleSaveQuestion}
+                    onDeleteQuestion={handleDeleteQuestion}
                   />
                 )}
 
@@ -958,6 +1087,8 @@ export default function App() {
                 employees={db.employees}
                 events={db.events}
                 onAddEvent={handleAddEvent}
+                onEditEvent={handleEditEvent}
+                onDeleteEvent={handleDeleteEvent}
                 onUpdateEventStatus={handleUpdateEventStatus}
               />
             )}
@@ -966,6 +1097,8 @@ export default function App() {
               <TrainingLibrary 
                 courses={db.courses}
                 onAddCourse={handleAddCourse}
+                onEditCourse={handleEditCourse}
+                onDeleteCourse={handleDeleteCourse}
               />
             )}
 
@@ -984,6 +1117,7 @@ export default function App() {
                 courses={db.courses}
                 employees={db.employees}
                 events={db.events}
+                postMarks={db.postMarks}
                 onSaveAttendance={handleSaveAttendance}
               />
             )}
@@ -1004,8 +1138,11 @@ export default function App() {
                 events={db.events}
                 feedbacks={db.feedbacks}
                 postMarks={db.postMarks}
+                questions={db.questions || []}
                 onAddFeedback={handleAddFeedback}
                 onSaveMarks={handleSaveMarks}
+                onSaveQuestion={handleSaveQuestion}
+                onDeleteQuestion={handleDeleteQuestion}
               />
             )}
 

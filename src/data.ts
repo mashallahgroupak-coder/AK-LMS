@@ -1,4 +1,4 @@
-import { Course, Employee, TrainingEvent, SkillRating, IndividualPreAssessment, DepartmentalPreAssessment, PostAssessmentFeedback, PostAssessmentMark } from './types';
+import { Course, Employee, TrainingEvent, SkillRating, IndividualPreAssessment, DepartmentalPreAssessment, PostAssessmentFeedback, PostAssessmentMark, MCQQuestion } from './types';
 
 export const INITIAL_COURSES: Course[] = [
   {
@@ -463,6 +463,307 @@ export const INITIAL_POST_MARKS: PostAssessmentMark[] = [
   { id: "M-012", trainingEventId: "EVT-2025-03", employeeCode: "AGI-1027", obtainedMarks: 76, totalMarks: 100 }
 ];
 
+export const INITIAL_QUESTIONS: MCQQuestion[] = [
+  // User Requested MCQ Q1 to Q10 in English & Urdu
+  {
+    id: "Q-USER-01",
+    courseId: "default",
+    question: "Why is continuous learning important in the workplace?",
+    questionUrdu: "کام کی جگہ پر مسلسل سیکھنا کیوں ضروری ہے؟",
+    options: [
+      "It helps improve knowledge and skills",
+      "It increases workload",
+      "It creates confusion",
+      "It has no impact"
+    ],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-USER-02",
+    courseId: "default",
+    question: "What should an employee do if they do not understand a task?",
+    questionUrdu: "اگر کسی ملازم کو کوئی کام سمجھ نہ آئے تو اسے کیا کرنا چاہیے؟",
+    options: [
+      "Ignore it",
+      "Ask for clarification from the supervisor",
+      "Delay the task",
+      "Let someone else do it"
+    ],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-USER-03",
+    courseId: "default",
+    question: "Which behavior reflects professionalism?",
+    questionUrdu: "پیشہ ورانہ رویے کی بہترین مثال کون سی ہے؟",
+    options: [
+      "Arriving late regularly",
+      "Meeting commitments and deadlines",
+      "Ignoring policies",
+      "Avoiding teamwork"
+    ],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-USER-04",
+    courseId: "default",
+    question: "Why is teamwork important?",
+    questionUrdu: "ٹیم ورک کیوں اہم ہے؟",
+    options: [
+      "It helps achieve common goals effectively",
+      "It creates conflict",
+      "It reduces productivity",
+      "It increases workload"
+    ],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-USER-05",
+    courseId: "default",
+    question: "What should you do when receiving feedback?",
+    questionUrdu: "فیڈبیک موصول ہونے پر آپ کو کیا کرنا چاہیے؟",
+    options: [
+      "Ignore it",
+      "Learn from it and improve performance",
+      "Argue with the reviewer",
+      "Reject it immediately"
+    ],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-USER-06",
+    courseId: "default",
+    question: "What is the purpose of workplace safety procedures?",
+    questionUrdu: "کام کی جگہ پر حفاظتی اقدامات (Safety Procedures) کا مقصد کیا ہے؟",
+    options: [
+      "To delay work",
+      "To increase paperwork",
+      "To protect employees and company assets",
+      "To create restrictions"
+    ],
+    correctAnswerIdx: 2
+  },
+  {
+    id: "Q-USER-07",
+    courseId: "default",
+    question: "How can employees contribute to organizational success?",
+    questionUrdu: "ملازمین تنظیم کی کامیابی میں کیسے کردار ادا کر سکتے ہیں؟",
+    options: [
+      "By following standards and improving performance",
+      "By avoiding responsibilities",
+      "By working alone",
+      "By ignoring communication"
+    ],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-USER-08",
+    courseId: "default",
+    question: "What is active listening?",
+    questionUrdu: "Active Listening کیا ہے؟",
+    options: [
+      "Listening carefully and understanding the message",
+      "Interrupting others",
+      "Speaking continuously",
+      "Ignoring the speaker"
+    ],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-USER-09",
+    courseId: "default",
+    question: "Which communication method reduces misunderstandings?",
+    questionUrdu: "غلط فہمیوں کو کم کرنے کے لیے کون سا طریقہ مؤثر ہے؟",
+    options: [
+      "Clear and concise communication",
+      "Making assumptions",
+      "Delayed responses",
+      "Informal discussions"
+    ],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-USER-10",
+    courseId: "default",
+    question: "Effective communication improves:",
+    questionUrdu: "مؤثر رابطہ کاری کس چیز کو بہتر بناتی ہے؟",
+    options: [
+      "Collaboration and productivity",
+      "Conflicts",
+      "Errors",
+      "Delays"
+    ],
+    correctAnswerIdx: 0
+  },
+  // Course Specific Questions
+  {
+    id: "Q-TRG01-01",
+    courseId: "TRG-01",
+    question: "Which light source is standard in Artistic Garment color grading cabinets to evaluate American retail specs?",
+    options: ["A Incandescent Light", "D65 light source (Simulated Daylight)", "UV Blacklight Filter", "Horizon Warm White"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG01-02",
+    courseId: "TRG-01",
+    question: "On a spectrophotometer, what does a negative b* output directly represent?",
+    options: ["Red tint deviation", "Yellow/Blue shade dominance (Blue shift)", "Starch concentration", "Weight distribution coefficient"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG01-03",
+    courseId: "TRG-01",
+    question: "Why must test swatches be conditioned for 4 hours before visual assessment?",
+    options: ["To stabilize moisture and temperature that change indigo light reflection properties", "To allow spin oil to evaporate completely", "To allow starch coating to crack", "To increase weaving tension"],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-TRG01-04",
+    courseId: "TRG-01",
+    question: "What is Metamerism in textile color quality management?",
+    options: ["Severe fabric shrink after five washes", "A mismatch where color matches under one light source but differs under another", "Dye bleeding in water baths", "Uneven thickness in yarn spinning"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG01-05",
+    courseId: "TRG-01",
+    question: "Which of the following scales is standard to measure chemical staining and color bleeding?",
+    options: ["GSM weighing scales", "Gray Scale for Staining and color transfer", "Warp Shrinkage grid ruler", "ASTM chemical index chart"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG03-01",
+    courseId: "TRG-03",
+    question: "What is the primary objective of continuous quality audits under ISO 9001:2015 specifications?",
+    options: ["Imposing fines on raw helper staff", "Establishing continuous improvement and preventing problems from occurring", "Speeding up visual scan times to 2 seconds", "Deleting outdated manufacturing logs"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG03-02",
+    courseId: "TRG-03",
+    question: "On AGI production lines who has full operational authority to issue a HOLD quarantine tag on suspicious cargo?",
+    options: ["Canteen food server assistants", "QA Inspector / QA Area Incharge", "Electrical motor helpers", "Mechanical maintenance apprentices"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG03-03",
+    courseId: "TRG-03",
+    question: "If defect recurrence exceeds Acceptable Quality Limit (AQL) boundaries under SOPs, what action must occur?",
+    options: ["Conceal the batch and load it into delivery trucks", "Release the consignment to save warehousing space", "Quarantine the lot, label with code, and submit a CAR (Corrective Action Request) to HOD", "Unplug the air compressor line"],
+    correctAnswerIdx: 2
+  },
+  {
+    id: "Q-TRG03-04",
+    courseId: "TRG-03",
+    question: "Which standard form registers verified training attendee signatures?",
+    options: ["HRM/4/008b (Feedback Survey)", "HRM/4/009 (Trainee Attendance Sheet)", "HRM/4/010 (Skills matrix grid handbook)", "QA/5/012 (Daily shade review sheet)"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG03-05",
+    courseId: "TRG-03",
+    question: "Which phrase defines the structural difference between Quality Control (QC) and Quality Assurance (QA)?",
+    options: ["QC is testing-focused inspection of parts; QA establishes systemic processes and training to prevent errors", "QA and QC are identical words in industrial manufacturing", "QA is only done exclusively during coffee breaks; QC is done at nights", "QA stands for Qualify Answer; QC stands for Quality Complaint"],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-TRG04-01",
+    courseId: "TRG-04",
+    question: "In the 4-Point System of fabric inspection, what is the maximum permissible points that can be awarded to any single defect?",
+    options: ["1 point", "2 points", "4 points", "10 points"],
+    correctAnswerIdx: 2
+  },
+  {
+    id: "Q-TRG04-02",
+    courseId: "TRG-04",
+    question: "Under the standard 4-Point system, if an inspector finds a defect measuring 7 inches, how many points are recorded?",
+    options: ["1 point", "2 points", "3 points", "4 points"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG04-03",
+    courseId: "TRG-04",
+    question: "What is the core purpose of holding regular Quality Inspector 'Calibration' rounds?",
+    options: ["Recalibrating high-speed metal cutting blades", "Removing subjective differences so inspectors assign the same grades to the same defects", "Refining yarn blending mixtures", "Measuring operator blood pressure"],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-TRG04-04",
+    courseId: "TRG-04",
+    question: "A fabric defect spanning greater than 9 inches attracts how many inspection points under the 4-point rule?",
+    options: ["1 point", "2 points", "3 points", "4 points"],
+    correctAnswerIdx: 3
+  },
+  {
+    id: "Q-TRG04-05",
+    courseId: "TRG-04",
+    question: "Which defect type represents a critical filling failure in denim rolling?",
+    options: ["Minor lint sticker easily brushed away", "Major continuous filling bands or warp stripes running face-wide", "Slight inner belt tag misprint", "A light thread tail"],
+    correctAnswerIdx: 1
+  },
+  // Default general fallbacks
+  {
+    id: "Q-DFT-01",
+    courseId: "default",
+    question: "What is the core purpose of conducting evaluations and assessments after quality training?",
+    options: [
+      "Securing compliance signatures for auditing record files only",
+      "Measuring actual skill transfer, lessons absorption, and practical floor competence",
+      "Calculating how to substitute raw fiber imports",
+      "Drafting daily shift output logs blindly"
+    ],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-DFT-02",
+    courseId: "default",
+    question: "In 5-Whys analysis (Root Cause Analysis - RCA), why is asking 'Why' multiple times critical?",
+    options: [
+      "To verify who made the mistake to distribute fines",
+      "To pierce past superficial surface symptoms to discover the true underlying systemic cause",
+      "To delay filling of incident paperwork metrics",
+      "Because the auditor likes reading redundant data loops"
+    ],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-DFT-03",
+    courseId: "default",
+    question: "What must be done immediately when an inspector spots a non-conformance lot?",
+    options: [
+      "Push it under passing fabric rolls to avoid record logs",
+      "Segregate the cargo with a designated RED quarantine card and place it in hold quarantine",
+      "Send it to shipment early before the HOD notices",
+      "Discard the lot instantly without creating records"
+    ],
+    correctAnswerIdx: 1
+  },
+  {
+    id: "Q-DFT-04",
+    courseId: "default",
+    question: "What does standard 'SOP' represent on industrial floor guides?",
+    options: [
+      "Standard Operating Procedure",
+      "Special Optimization Policy",
+      "Sector Organization Platform",
+      "Series Output Projector"
+    ],
+    correctAnswerIdx: 0
+  },
+  {
+    id: "Q-DFT-05",
+    courseId: "default",
+    question: "Which quality approach is highly cost-preventative in denim manufacturing?",
+    options: [
+      "Post-shipment customer claims reconciliation",
+      "In-line error prevention and immediate correction training",
+      "Reworking stitching defects post-fabrication",
+      "Replacing complete rolling machines daily"
+    ],
+    correctAnswerIdx: 1
+  }
+];
+
 export function getLMSData() {
   const getOrSet = (key: string, defaultVal: any) => {
     const saved = localStorage.getItem(key);
@@ -486,6 +787,7 @@ export function getLMSData() {
     departmentalPre: getOrSet('agi_lms_departmental_pre', INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS),
     feedbacks: getOrSet('agi_lms_feedbacks', INITIAL_FEEDBACKS),
     postMarks: getOrSet('agi_lms_post_marks', INITIAL_POST_MARKS),
+    questions: getOrSet('agi_lms_questions', INITIAL_QUESTIONS),
   };
 }
 
@@ -498,6 +800,7 @@ export function saveLMSData(data: {
   departmentalPre: DepartmentalPreAssessment[];
   feedbacks: PostAssessmentFeedback[];
   postMarks: PostAssessmentMark[];
+  questions: MCQQuestion[];
 }) {
   localStorage.setItem('agi_lms_courses', JSON.stringify(data.courses));
   localStorage.setItem('agi_lms_employees', JSON.stringify(data.employees));
@@ -507,4 +810,6 @@ export function saveLMSData(data: {
   localStorage.setItem('agi_lms_departmental_pre', JSON.stringify(data.departmentalPre));
   localStorage.setItem('agi_lms_feedbacks', JSON.stringify(data.feedbacks));
   localStorage.setItem('agi_lms_post_marks', JSON.stringify(data.postMarks));
+  localStorage.setItem('agi_lms_questions', JSON.stringify(data.questions));
 }
+

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Course, Employee, TrainingEvent } from '../types';
+import { Course, Employee, TrainingEvent, PostAssessmentMark } from '../types';
 import { Save, AlertCircle, FileCheck, CheckCircle2, Award, Printer, ShieldAlert } from 'lucide-react';
 
 interface AttendanceSheetProps {
   courses: Course[];
   employees: Employee[];
   events: TrainingEvent[];
+  postMarks?: PostAssessmentMark[];
   onSaveAttendance: (
     eventId: string, 
     attendeeUpdates: { employeeCode: string; reportingTime: string; present: boolean; signature: string }[],
@@ -19,6 +20,7 @@ export const AttendanceSheet: React.FC<AttendanceSheetProps> = ({
   courses,
   employees,
   events,
+  postMarks = [],
   onSaveAttendance
 }) => {
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id || '');
@@ -26,6 +28,18 @@ export const AttendanceSheet: React.FC<AttendanceSheetProps> = ({
   // Custom form bindings
   const activeEvent = events.find(e => e.id === selectedEventId) || events[0];
   const activeCourse = activeEvent ? courses.find(c => c.id === activeEvent.courseId) : null;
+
+  // Dynamic L&D metrics for attendance minutes, hours, and man-hours calculations
+  const durationMins = activeCourse ? (activeCourse.durationMinutes || (activeCourse.durationHours * 60)) : 0;
+  const durationHours = activeCourse ? (activeCourse.durationHours || Number((durationMins / 60).toFixed(2))) : 0;
+  const presentCount = activeEvent ? activeEvent.attendees.filter(a => presenceStates[a.employeeCode]).length : 0;
+  const manHours = Number((presentCount * durationHours).toFixed(1));
+  const trainingType = activeCourse?.trainer ? (activeCourse.trainer.toLowerCase().includes('external') ? 'External' : 'Internal') : 'Internal';
+  
+  const eventMarks = activeEvent ? postMarks.filter(m => m.trainingEventId === activeEvent.id) : [];
+  const avgScoreString = eventMarks.length > 0 
+    ? `${(eventMarks.reduce((acc, current) => acc + current.obtainedMarks, 0) / eventMarks.length).toFixed(0)}%`
+    : "Not Graded Yet";
 
   // Track editable state internally
   const [reportingTimes, setReportingTimes] = useState<{ [code: string]: string }>({});
@@ -211,6 +225,31 @@ export const AttendanceSheet: React.FC<AttendanceSheetProps> = ({
               <span className="text-xs text-slate-500 font-semibold">TRAINING SUBJECT:</span>
               <span className="font-bold text-slate-900 truncate max-w-[160px]" title={activeCourse?.name}>{activeCourse?.name || "N/A"}</span>
             </div>
+          </div>
+        </div>
+
+        {/* L&D KPIs: Duration, Training Hours, Man Hours, Type, and Assessment Score */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200 no-print">
+          <div className="text-center p-2.5 bg-white rounded-lg border border-slate-200/60 flex flex-col justify-between h-full min-h-[56px] shadow-sm">
+            <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Duration (Mins)</p>
+            <p className="text-sm font-black text-slate-900 tracking-tight font-mono mt-1">{durationMins} mins</p>
+          </div>
+          <div className="text-center p-2.5 bg-white rounded-lg border border-slate-200/60 flex flex-col justify-between h-full min-h-[56px] shadow-sm">
+            <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Training Hours</p>
+            <p className="text-sm font-black text-slate-900 tracking-tight font-mono mt-1">{durationHours} hrs</p>
+          </div>
+          <div className="text-center p-2.5 bg-white rounded-lg border border-slate-200/60 flex flex-col justify-between h-full min-h-[56px] shadow-sm">
+            <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Man Hours</p>
+            <p className="text-sm font-black text-emerald-705 tracking-tight font-mono mt-1">{manHours} M-Hrs</p>
+            <p className="text-[8px] text-slate-400 font-medium leading-none mt-1">({presentCount} present × {durationHours}h)</p>
+          </div>
+          <div className="text-center p-2.5 bg-white rounded-lg border border-slate-200/60 flex flex-col justify-between h-full min-h-[56px] shadow-sm">
+            <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Type (Int/Ext)</p>
+            <p className="text-sm font-black text-blue-705 tracking-tight mt-1">{trainingType}</p>
+          </div>
+          <div className="text-center p-2.5 bg-white rounded-lg border border-slate-200/60 flex flex-col justify-between h-full min-h-[56px] shadow-sm col-span-2 md:col-span-1">
+            <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Assessment Score</p>
+            <p className="text-sm font-black text-indigo-705 tracking-tight font-mono mt-1">{avgScoreString}</p>
           </div>
         </div>
 

@@ -137,3 +137,13 @@ export interface PostAssessmentMark {
   obtainedMarks: number;
   totalMarks: number;
 }
+
+export interface MCQQuestion {
+  id: string;
+  courseId: string; // The course this MCQ belongs to, or "default"
+  question: string; // English question
+  questionUrdu?: string; // Urdu translation
+  options: string[]; // Options array (usually A, B, C, D)
+  correctAnswerIdx: number; // Index of correct option (0, 1, 2, 3)
+}
+
