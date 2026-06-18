@@ -1,0 +1,6 @@
+{
+  "name": "AGI Denim Learning Management System",
+  "description": "A comprehensive Learning Management & L&D Dashboard for Artistic Garment Industries (AGI Denim), featuring Skill Matrix, Pre-Assessment, Training Calendars, Nomination, Attendance, Post-Assessment, and Unit-wise analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
