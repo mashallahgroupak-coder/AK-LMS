@@ -37,45 +37,50 @@ export default function App() {
       if (currentUser) {
         setIsSyncing(true);
         try {
-          const coursesSnap = await getDocs(collection(firestoreDb, 'courses'));
-          if (coursesSnap.empty) {
-            // Seed default values to Firestore for immediate sandbox preview
-            for (const course of INITIAL_COURSES) {
-              await setDoc(doc(firestoreDb, 'courses', course.id), course);
-            }
-            for (const emp of INITIAL_EMPLOYEES) {
-              await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
-            }
-            for (const ev of INITIAL_EVENTS) {
-              await setDoc(doc(firestoreDb, 'events', ev.id), ev);
-            }
-            for (const sk of INITIAL_SKILLS) {
-              const skillId = `${sk.employeeCode}_${sk.courseId}`;
-              await setDoc(doc(firestoreDb, 'skills', skillId), sk);
-            }
-            for (const ind of INITIAL_INDIVIDUAL_PRE_ASSESSMENTS) {
-              await setDoc(doc(firestoreDb, 'individualPre', ind.id), ind);
-            }
-            for (const dept of INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS) {
-              await setDoc(doc(firestoreDb, 'departmentalPre', dept.id), dept);
-            }
-            for (const fb of INITIAL_FEEDBACKS) {
-              await setDoc(doc(firestoreDb, 'feedbacks', fb.id), fb);
-            }
-            for (const pm of INITIAL_POST_MARKS) {
-              await setDoc(doc(firestoreDb, 'postMarks', pm.id), pm);
-            }
-            for (const q of INITIAL_QUESTIONS) {
-              await setDoc(doc(firestoreDb, 'questions', q.id), q);
-            }
-          } else {
-            // Guarantee questions collection exists if course are there but questions empty
-            const questionsSnap = await getDocs(collection(firestoreDb, 'questions'));
-            if (questionsSnap.empty) {
+          const configSnap = await getDocs(collection(firestoreDb, 'config'));
+          if (configSnap.empty) {
+            const coursesSnap = await getDocs(collection(firestoreDb, 'courses'));
+            if (coursesSnap.empty) {
+              // Seed default values to Firestore for immediate sandbox preview because database is completely uninitialized
+              for (const course of INITIAL_COURSES) {
+                await setDoc(doc(firestoreDb, 'courses', course.id), course);
+              }
+              for (const emp of INITIAL_EMPLOYEES) {
+                await setDoc(doc(firestoreDb, 'employees', emp.code), emp);
+              }
+              for (const ev of INITIAL_EVENTS) {
+                await setDoc(doc(firestoreDb, 'events', ev.id), ev);
+              }
+              for (const sk of INITIAL_SKILLS) {
+                const skillId = `${sk.employeeCode}_${sk.courseId}`;
+                await setDoc(doc(firestoreDb, 'skills', skillId), sk);
+              }
+              for (const ind of INITIAL_INDIVIDUAL_PRE_ASSESSMENTS) {
+                await setDoc(doc(firestoreDb, 'individualPre', ind.id), ind);
+              }
+              for (const dept of INITIAL_DEPARTMENTAL_PRE_ASSESSMENTS) {
+                await setDoc(doc(firestoreDb, 'departmentalPre', dept.id), dept);
+              }
+              for (const fb of INITIAL_FEEDBACKS) {
+                await setDoc(doc(firestoreDb, 'feedbacks', fb.id), fb);
+              }
+              for (const pm of INITIAL_POST_MARKS) {
+                await setDoc(doc(firestoreDb, 'postMarks', pm.id), pm);
+              }
               for (const q of INITIAL_QUESTIONS) {
                 await setDoc(doc(firestoreDb, 'questions', q.id), q);
               }
+            } else {
+              // Guarantee questions collection exists if courses are there but questions empty
+              const questionsSnap = await getDocs(collection(firestoreDb, 'questions'));
+              if (questionsSnap.empty) {
+                for (const q of INITIAL_QUESTIONS) {
+                  await setDoc(doc(firestoreDb, 'questions', q.id), q);
+                }
+              }
             }
+            // Mark system as initialized so it never auto-seeds again even if all collections are empty
+            await setDoc(doc(firestoreDb, 'config', 'status'), { initialized: true });
           }
         } catch (err) {
           handleFirestoreError(err, OperationType.GET, 'init-seed');
@@ -616,6 +621,8 @@ export default function App() {
           for (const q of INITIAL_QUESTIONS) {
             await setDoc(doc(firestoreDb, 'questions', q.id), q);
           }
+          // Set system state to initialized
+          await setDoc(doc(firestoreDb, 'config', 'status'), { initialized: true });
         } catch (err) {
           console.error("Error resetting Firestore database:", err);
           alert("Failed to reset Firestore database.");
@@ -674,6 +681,9 @@ export default function App() {
             questions: []
           };
           setDb(emptyDb);
+          
+          // Mark system as initialized/wiped to prevent automatic default seeds
+          await setDoc(doc(firestoreDb, 'config', 'status'), { initialized: true, wiped: true });
           alert("All database collections successfully wiped! Zero-data slate generated.");
         } catch (err) {
           console.error("Error clearing database:", err);
