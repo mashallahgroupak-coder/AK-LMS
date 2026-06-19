@@ -99,6 +99,33 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
   const [csvCoursesText, setCsvCoursesText] = useState('');
   const [csvMasterText, setCsvMasterText] = useState('');
 
+  // Customizable Widgets Layout state
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
+  const [widgets, setWidgets] = useState<Array<{
+    id: string;
+    title: string;
+    visible: boolean;
+    size: 'small' | 'medium' | 'large';
+    type: 'metric' | 'chart' | 'list' | 'custom';
+    customVal?: string;
+    customColor?: string;
+  }>>([
+    { id: 'widget-courses', title: '⚙️ Preloaded Courses Matrix', visible: true, size: 'small', type: 'metric' },
+    { id: 'widget-employees', title: '👥 Active Employee Registry', visible: true, size: 'small', type: 'metric' },
+    { id: 'widget-hours', title: '⏱️ Total L&D Hours', visible: true, size: 'small', type: 'metric' },
+    { id: 'widget-feedback', title: '⭐ Average Kirkpatrick L1', visible: true, size: 'small', type: 'metric' },
+    { id: 'widget-needs', title: '⚠️ Pending Needs Assessment', visible: true, size: 'small', type: 'metric' },
+    { id: 'widget-unit-chart', title: '📊 Unit-wise Trained Attendance Chart', visible: true, size: 'large', type: 'chart' },
+    { id: 'widget-scope-pie', title: '🍩 Scope Classification Pie Summary', visible: true, size: 'medium', type: 'chart' },
+    { id: 'widget-calendar-tracks', title: '📅 Future Scheduled Tracks', visible: true, size: 'medium', type: 'list' },
+    { id: 'widget-needs-assessment', title: '🩹 Needs Assessments Ledger', visible: true, size: 'medium', type: 'list' },
+  ]);
+
+  const [newWidgetTitle, setNewWidgetTitle] = useState('');
+  const [newWidgetValue, setNewWidgetValue] = useState('');
+  const [newWidgetColor, setNewWidgetColor] = useState('blue');
+  const [newWidgetSize, setNewWidgetSize] = useState<'small' | 'medium' | 'large'>('small');
+
   // Drag and drop states
   const [isDraggingEmp, setIsDraggingEmp] = useState(false);
   const [isDraggingCrs, setIsDraggingCrs] = useState(false);
@@ -289,6 +316,64 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
     }
   };
 
+  // --- Dynamic Dashboard Widgets Customizer logic ---
+  const moveWidget = (index: number, direction: 'up' | 'down') => {
+    const nextIdx = direction === 'up' ? index - 1 : index + 1;
+    if (nextIdx < 0 || nextIdx >= widgets.length) return;
+    const newWidgets = [...widgets];
+    const temp = newWidgets[index];
+    newWidgets[index] = newWidgets[nextIdx];
+    newWidgets[nextIdx] = temp;
+    setWidgets(newWidgets);
+  };
+
+  const toggleWidgetVisibility = (id: string) => {
+    setWidgets(prev => prev.map(w => w.id === id ? { ...w, visible: !w.visible } : w));
+  };
+
+  const changeWidgetSize = (id: string, size: 'small' | 'medium' | 'large') => {
+    setWidgets(prev => prev.map(w => w.id === id ? { ...w, size } : w));
+  };
+
+  const handleAddCustomWidget = () => {
+    if (!newWidgetTitle.trim() || !newWidgetValue.trim()) {
+      alert("Please specify a widget title and a target numeric/percentage value first.");
+      return;
+    }
+    const slug = 'custom-widget-' + Date.now();
+    const newW = {
+      id: slug,
+      title: '🎯 ' + newWidgetTitle.trim(),
+      visible: true,
+      size: newWidgetSize,
+      type: 'custom' as const,
+      customVal: newWidgetValue.trim(),
+      customColor: newWidgetColor
+    };
+    setWidgets(prev => [...prev, newW]);
+    setNewWidgetTitle('');
+    setNewWidgetValue('');
+    alert(`Successfully added customized widget "${newW.title}" to your live layout stream!`);
+  };
+
+  const handleRemoveWidget = (id: string) => {
+    setWidgets(prev => prev.filter(w => w.id !== id));
+  };
+
+  const resetWidgetsLayout = () => {
+    setWidgets([
+      { id: 'widget-courses', title: '⚙️ Preloaded Courses Matrix', visible: true, size: 'small', type: 'metric' },
+      { id: 'widget-employees', title: '👥 Active Employee Registry', visible: true, size: 'small', type: 'metric' },
+      { id: 'widget-hours', title: '⏱️ Total L&D Hours', visible: true, size: 'small', type: 'metric' },
+      { id: 'widget-feedback', title: '⭐ Average Kirkpatrick L1', visible: true, size: 'small', type: 'metric' },
+      { id: 'widget-needs', title: '⚠️ Pending Needs Assessment', visible: true, size: 'small', type: 'metric' },
+      { id: 'widget-unit-chart', title: '📊 Unit-wise Trained Attendance Chart', visible: true, size: 'large', type: 'chart' },
+      { id: 'widget-scope-pie', title: '🍩 Scope Classification Pie Summary', visible: true, size: 'medium', type: 'chart' },
+      { id: 'widget-calendar-tracks', title: '📅 Future Scheduled Tracks', visible: true, size: 'medium', type: 'list' },
+      { id: 'widget-needs-assessment', title: '🩹 Needs Assessments Ledger', visible: true, size: 'medium', type: 'list' },
+    ]);
+  };
+
   // Calculations
   const totalEmployees = employees.length;
   const totalCourses = courses.length;
@@ -378,7 +463,20 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
           <p className="text-slate-300 max-w-xl text-sm leading-relaxed">
             Consolidated platform mapping training schedules, needs-assessments, live attendance tracks, and ISO-compliant post-assessment analytics for the Quality Assurance group.
           </p>
-        </div>        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        </div>
+        
+        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <button
+            onClick={() => setIsCustomizerOpen(prev => !prev)}
+            className={`px-4 py-2 border rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-1.5 cursor-pointer no-print whitespace-nowrap ${
+              isCustomizerOpen 
+                ? 'bg-violet-605 bg-violet-700 text-white border-violet-650' 
+                : 'bg-slate-800 hover:bg-slate-750 border border-slate-700 text-violet-300'
+            }`}
+          >
+            <span>🛠️ Custom Dashboard UI</span>
+          </button>
+
           <button
             onClick={() => setIsAdminOpen(prev => !prev)}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-xl text-xs font-semibold text-sky-400 transition-all flex items-center justify-center space-x-1.5 cursor-pointer no-print whitespace-nowrap"
@@ -406,6 +504,184 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* 🛠️ WIDGETS MANAGER PANEL */}
+      {isCustomizerOpen && (
+        <div className="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-800 space-y-6 shadow-xl relative overflow-hidden transition-all duration-300 no-print animate-fade-in">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+            <div className="space-y-1">
+              <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-wider text-violet-400 font-sans">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+                <span>Dashboard Layout Customizer & KPI Studio</span>
+              </h3>
+              <p className="text-[11px] text-slate-400">Rearrange cards, manipulate columns grids, toggle scopes, or deploy custom targeted operational benchmarks below.</p>
+            </div>
+            <button 
+              onClick={() => setIsCustomizerOpen(false)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800/80 cursor-pointer"
+              title="Close Panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* List & Rearrange existing */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase text-slate-350 tracking-wider">Arrange Current Widget Streams ({widgets.length})</h4>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {widgets.map((widget, idx) => (
+                  <div key={widget.id} className="bg-slate-950/80 border border-slate-850 p-2.5 rounded-xl flex items-center justify-between gap-3 text-xs">
+                    <div className="overflow-hidden flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-mono tracking-widest font-black uppercase ${
+                          widget.visible ? 'bg-emerald-950 text-emerald-400 border border-emerald-900/40' : 'bg-red-950 text-red-400 border border-red-900/40'
+                        }`}>
+                          {widget.visible ? "ACTIVE" : "HIDDEN"}
+                        </span>
+                        <span className="font-extrabold text-slate-200 truncate">{widget.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                        <span>Span Size: <strong>{widget.size.toUpperCase()}</strong></span>
+                        <span>•</span>
+                        <span>Type: <strong>{widget.type.toUpperCase()}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Move Up */}
+                      <button 
+                        onClick={() => moveWidget(idx, 'up')}
+                        disabled={idx === 0}
+                        className="p-1 hover:bg-slate-850 rounded text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer text-[10px] font-bold"
+                        title="Move Up"
+                      >
+                        ▲
+                      </button>
+                      {/* Move Down */}
+                      <button 
+                        onClick={() => moveWidget(idx, 'down')}
+                        disabled={idx === widgets.length - 1}
+                        className="p-1 hover:bg-slate-850 rounded text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer text-[10px] font-bold"
+                        title="Move Down"
+                      >
+                        ▼
+                      </button>
+                      {/* Visibility select */}
+                      <button 
+                        onClick={() => toggleWidgetVisibility(widget.id)}
+                        className={`p-1 rounded cursor-pointer text-xs ${widget.visible ? 'text-emerald-400 hover:text-emerald-350' : 'text-slate-500'}`}
+                        title={widget.visible ? "Hide from View" : "Show on dashboard"}
+                      >
+                        {widget.visible ? "👁️" : "👓"}
+                      </button>
+                      {/* Sizing dropdown */}
+                      <select
+                        value={widget.size}
+                        onChange={(e) => changeWidgetSize(widget.id, e.target.value as any)}
+                        className="bg-slate-900 border border-slate-800 text-[10px] p-1 rounded font-bold cursor-pointer outline-none text-slate-100"
+                      >
+                        <option value="small">Small (Col 1)</option>
+                        <option value="medium">Medium (Col 2)</option>
+                        <option value="large">Large (Col 3)</option>
+                      </select>
+
+                      {widget.type === 'custom' && (
+                        <button 
+                          onClick={() => handleRemoveWidget(widget.id)}
+                          className="p-1 text-red-400 hover:text-red-300 rounded cursor-pointer"
+                          title="Remove custom widget"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 flex justify-start">
+                <button
+                  onClick={resetWidgetsLayout}
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-wider transition cursor-pointer"
+                >
+                  ↩️ Reset Corporate Defaults
+                </button>
+              </div>
+            </div>
+
+            {/* Deploy new Custom widget */}
+            <div className="bg-slate-950/40 p-5 rounded-2xl border border-slate-850/80 space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-violet-400 flex items-center gap-1.5">
+                <span>➕ Add Custom KPI Stream Card</span>
+              </h4>
+              <p className="text-[10px] text-slate-400">Instantly generate a tailored numerical metric, such as attendance targets, performance benchmarks, or compliance coefficients.</p>
+              
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-slate-400">Widget Title:</label>
+                    <input 
+                      type="text" 
+                      value={newWidgetTitle}
+                      onChange={e => setNewWidgetTitle(e.target.value)}
+                      placeholder="e.g. Compliance Rate"
+                      className="w-full bg-slate-900 border border-slate-800 text-xs px-3 py-2 rounded-xl text-white outline-none focus:border-violet-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-slate-400">Metric Value:</label>
+                    <input 
+                      type="text" 
+                      value={newWidgetValue}
+                      onChange={e => setNewWidgetValue(e.target.value)}
+                      placeholder="e.g. 98.4% or 25 Goals"
+                      className="w-full bg-slate-900 border border-slate-800 text-xs px-3 py-2 rounded-xl text-white outline-none focus:border-violet-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-slate-400">Theme Color:</label>
+                    <select
+                      value={newWidgetColor}
+                      onChange={e => setNewWidgetColor(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs px-3 py-2 rounded-xl text-white outline-none cursor-pointer"
+                    >
+                      <option value="blue">Deep Blue</option>
+                      <option value="emerald">Emerald Green</option>
+                      <option value="amber">Amber gold</option>
+                      <option value="rose">Rose Red</option>
+                      <option value="indigo">Violet Indigo</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-slate-400">Default Width Scope:</label>
+                    <select
+                      value={newWidgetSize}
+                      onChange={e => setNewWidgetSize(e.target.value as any)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs px-3 py-2 rounded-xl text-white outline-none cursor-pointer"
+                    >
+                      <option value="small">Small (Col 1)</option>
+                      <option value="medium">Medium (Col 2)</option>
+                      <option value="large">Large (Col 3)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleAddCustomWidget}
+                  className="w-full py-2 bg-gradient-to-r from-violet-605 to-indigo-605 bg-indigo-600 hover:opacity-90 text-white font-extrabold uppercase tracking-wider text-[10.5px] rounded-xl cursor-pointer shadow-md shadow-violet-900/30 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>🚀 Register New KPI Widget Card</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ZERO STATE CUSTOM SLATE CARD ADVISER */}
       {totalEmployees === 0 && totalCourses === 0 && (
@@ -481,270 +757,327 @@ export const DashboardOverview: React.FC<OverviewProps> = ({
         </div>
       )}
 
-      {/* Metrics Ribbon */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" id="metrics-grid">
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4">
-          <div className="p-3 bg-slate-50 rounded-xl text-slate-800">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 font-medium">Courses Preloaded</p>
-            <p className="text-2xl font-bold text-slate-900">{totalCourses}</p>
-            <p className="text-[10px] text-emerald-600 font-mono mt-0.5">ISO HRM/4/010 Compliant</p>
-          </div>
-        </div>
+      {/* DYNAMIC WIDGETS CHASSIS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="widgets-dashboard-board">
+        {widgets.filter(w => w.visible).map(widget => {
+          // Resolve sizing class
+          let sizeClass = "col-span-1";
+          if (widget.size === "medium") {
+            sizeClass = "col-span-1 md:col-span-2";
+          } else if (widget.size === "large") {
+            sizeClass = "col-span-1 md:col-span-2 lg:col-span-3";
+          }
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4">
-          <div className="p-3 bg-slate-50 rounded-xl text-slate-800">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 font-medium">Preloaded Employees</p>
-            <p className="text-2xl font-bold text-slate-900">{totalEmployees}</p>
-            <p className="text-[10px] text-slate-500 font-mono mt-0.5">Quality QA/Lab Teams</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4">
-          <div className="p-3 bg-slate-50 rounded-xl text-slate-800">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 font-medium">Total Training Hours</p>
-            <p className="text-2xl font-bold text-slate-900">{totalHoursDelivered} <span className="text-xs font-normal text-slate-500">hrs</span></p>
-            <p className="text-[10px] text-sky-600 font-mono mt-0.5">Delivered Accumulative</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4">
-          <div className="p-3 bg-slate-50 rounded-xl text-slate-800">
-            <Award className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 font-medium">Avg Feedback Score</p>
-            <p className="text-2xl font-bold text-slate-900">{avgFeedbackScore} <span className="text-xs font-normal text-slate-500">/ 5</span></p>
-            <p className="text-[10px] text-emerald-600 font-mono mt-0.5">HRM/4/008(b) Standard</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4 sm:col-span-2 lg:col-span-1">
-          <div className="p-3 bg-red-50 rounded-xl text-red-650">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 font-medium">Needs Evaluations</p>
-            <p className="text-2xl font-bold text-red-650">{pendingTnaCount}</p>
-            <p className="text-[10px] text-red-500 font-mono mt-0.5">Awaiting Effectiveness</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main grids */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="dashboard-main-sectors">
-        {/* Charts: Recharts Stats by Unit */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-50">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-sans">Unit-wise Trained Attendance Volume</h3>
-              <p className="text-xs text-slate-500">Accumulative metrics mapping trained attendees vs. uniqueness of worker pool per production block</p>
-            </div>
-          </div>
-          
-          <div className="h-72 w-full mt-2" id="unit-chart-container">
-            {unitStatsData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                No training stats computed yet. Run events in Attendance!
+          // Render individual widgets matching IDs
+          if (widget.id === 'widget-courses') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4`}>
+                <div className="p-3 bg-slate-50 rounded-xl text-slate-800 shrink-0">
+                  <BookOpen className="w-5 h-5 pointer-events-none" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500 font-medium truncate">Courses Preloaded</p>
+                  <p className="text-2xl font-black text-slate-900 leading-none my-1">{totalCourses}</p>
+                  <p className="text-[10px] text-emerald-600 font-mono font-bold truncate">ISO HRM/4/010 Compliant</p>
+                </div>
               </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={unitStatsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', borderColor: '#f1f5f9', fontSize: '12px' }}
-                    cursor={{ fill: 'rgba(241, 245, 249, 0.5)' }} 
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                  <Bar dataKey="Attendees Trained" fill="#0f172a" radius={[4, 4, 0, 0]} barSize={24} />
-                  <Bar dataKey="Unique Trainees" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+            );
+          }
 
-        {/* Pie: Course Scope Breakdown */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] flex flex-col justify-between">
-          <div className="space-y-1 pb-4 border-b border-slate-50">
-            <h3 className="text-base font-bold text-slate-900 font-sans">Scope Classification</h3>
-            <p className="text-xs text-slate-500">Distribution of preloaded L&D training subjects</p>
-          </div>
-
-          <div className="h-52 w-full flex items-center justify-center relative my-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={scopeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={75}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {scopeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Total course badge inside Pie */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-4">
-              <span className="text-2xl font-bold text-slate-900">{totalCourses}</span>
-              <span className="text-[10px] font-semibold text-slate-400">Total Matrix</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-xs pt-2">
-            {scopeData.map((item, index) => (
-              <div key={item.name} className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                <span className="text-slate-600 truncate max-w-[120px]">{item.name}:</span>
-                <span className="font-bold text-slate-800 font-mono ml-auto">{item.value}</span>
+          if (widget.id === 'widget-employees') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4`}>
+                <div className="p-3 bg-slate-50 rounded-xl text-slate-800 shrink-0">
+                  <Users className="w-5 h-5 pointer-events-none" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500 font-medium truncate">Preloaded Employees</p>
+                  <p className="text-2xl font-black text-slate-900 leading-none my-1">{totalEmployees}</p>
+                  <p className="text-[10px] text-slate-500 font-mono truncate">Quality QA/Lab Teams</p>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            );
+          }
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="dashboard-additional-panels">
-        {/* Calendar / Upcoming Events list */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-50">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-sans">Scheduled L&D Calendar Tracks</h3>
-              <p className="text-xs text-slate-500">Upcoming training slots scheduled by HRM/4/010</p>
-            </div>
-            <button 
-              onClick={() => onNavigate('calendar')}
-              className="text-xs text-sky-600 hover:text-sky-700 font-semibold cursor-pointer"
-            >
-              Configure
-            </button>
-          </div>
+          if (widget.id === 'widget-hours') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4`}>
+                <div className="p-3 bg-slate-50 rounded-xl text-slate-800 shrink-0">
+                  <Clock className="w-5 h-5 pointer-events-none" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500 font-medium truncate">Total Training Hours</p>
+                  <p className="text-2xl font-black text-slate-900 leading-none my-1">{totalHoursDelivered} <span className="text-xs font-normal text-slate-500">hrs</span></p>
+                  <p className="text-[10px] text-sky-600 font-mono font-bold truncate">Delivered Accumulative</p>
+                </div>
+              </div>
+            );
+          }
 
-          {upcomingEvents.length === 0 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-slate-400 text-xs space-y-1">
-              <span>All currently scheduled courses are completed.</span>
-              <button 
-                onClick={onQuickSchedule}
-                className="text-sky-600 hover:underline font-semibold text-xs mt-1"
-              >
-                Schedule an event now
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3 cursor-pointer overflow-y-auto max-h-[220px]">
-              {upcomingEvents.map(evt => {
-                const crs = courses.find(c => c.id === evt.courseId);
-                return (
-                  <div 
-                    key={evt.id} 
-                    onClick={() => onNavigate('attendance')}
-                    className="flex justify-between items-center p-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-150 rounded-xl transition-all"
-                  >
-                    <div className="space-y-1">
-                      <span className="inline-block px-1.5 py-0.5 bg-slate-900 text-white rounded font-mono text-[9px] font-semibold">
-                        {crs?.id || "N/A"}
-                      </span>
-                      <h4 className="text-xs font-bold text-slate-900 leading-tight">
-                        {crs?.name}
-                      </h4>
-                      <p className="text-[10px] text-slate-400 font-mono">Ref: {evt.trgRef} | Time: {evt.time}</p>
-                    </div>
-                    <div className="text-right space-y-1 shrink-0 ml-4">
-                      <span className="text-[10px] text-slate-500 font-semibold block">
-                        {evt.date}
-                      </span>
-                      <span className="inline-block px-2 py-0.5 bg-sky-100 text-sky-850 rounded text-[9px] font-semibold tracking-wider font-mono">
-                        {evt.attendees.length} Nominated
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          if (widget.id === 'widget-feedback') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4`}>
+                <div className="p-3 bg-slate-50 rounded-xl text-slate-800 shrink-0">
+                  <Award className="w-5 h-5 pointer-events-none" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500 font-medium truncate">Avg Feedback Score</p>
+                  <p className="text-2xl font-black text-slate-900 leading-none my-1">{avgFeedbackScore} <span className="text-xs font-normal text-slate-500">/ 5</span></p>
+                  <p className="text-[10px] text-emerald-600 font-mono font-bold truncate">HRM/4/008(b) Standard</p>
+                </div>
+              </div>
+            );
+          }
 
-        {/* Needs evaluations (Pre assessment summary) */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-50">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-sans">Active Needs Assessment Logs</h3>
-              <p className="text-xs text-slate-500">Individual & departmental assessments awaiting post-training evaluation</p>
-            </div>
-            <button 
-              onClick={() => onNavigate('pre')}
-              className="text-xs text-sky-600 hover:text-sky-700 font-semibold cursor-pointer"
-            >
-              Open Module
-            </button>
-          </div>
+          if (widget.id === 'widget-needs') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4`}>
+                <div className="p-3 bg-red-50 rounded-xl text-red-650 shrink-0">
+                  <AlertTriangle className="w-5 h-5 pointer-events-none" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500 font-medium truncate">Needs Evaluations</p>
+                  <p className="text-2xl font-black text-red-650 leading-none my-1">{pendingTnaCount}</p>
+                  <p className="text-[10px] text-red-500 font-mono font-bold truncate">Awaiting Effectiveness</p>
+                </div>
+              </div>
+            );
+          }
 
-          <div className="space-y-3 max-h-[220px] overflow-y-auto">
-            {individualPre.filter(p => !p.isEvaluated).map(ind => {
-              const emp = employees.find(e => e.code === ind.employeeCode);
-              return (
-                <div key={ind.id} className="p-3 bg-red-50/50 border border-red-100 rounded-xl flex items-center justify-between">
+          if (widget.id === 'widget-unit-chart') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4`}>
+                <div className="flex justify-between items-center pb-2 border-b border-slate-50">
                   <div>
-                    <span className="inline-block px-1.5 py-0.5 bg-red-100 text-red-800 rounded text-[9px] font-bold tracking-wider uppercase font-mono mr-2">
-                       Individual
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Ref: {ind.id}</span>
-                    <h4 className="text-xs font-bold text-slate-900 mt-1">{ind.trainingSubject}</h4>
-                    <p className="text-[10px] text-slate-500 font-medium">For Employee: {emp?.name || ind.employeeCode} ({emp?.designation})</p>
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Unit-wise Trained Attendance Volume</h3>
+                    <p className="text-xs text-slate-500">Accumulative metrics mapping trained attendees vs. uniqueness of worker pool per production block</p>
+                  </div>
+                </div>
+                
+                <div className="h-72 w-full mt-2" id="unit-chart-container">
+                  {unitStatsData.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                      No training stats computed yet. Run events in Attendance!
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={unitStatsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '12px', borderColor: '#f1f5f9', fontSize: '12px' }}
+                          cursor={{ fill: 'rgba(241, 245, 249, 0.5)' }} 
+                        />
+                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                        <Bar dataKey="Attendees Trained" fill="#0f172a" radius={[4, 4, 0, 0]} barSize={24} />
+                        <Bar dataKey="Unique Trainees" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={24} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (widget.id === 'widget-scope-pie') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] flex flex-col justify-between`}>
+                <div className="space-y-1 pb-4 border-b border-slate-50">
+                  <h3 className="text-base font-bold text-slate-900 font-sans">Scope Classification</h3>
+                  <p className="text-xs text-slate-500">Distribution of preloaded L&D training subjects</p>
+                </div>
+
+                <div className="h-52 w-full flex items-center justify-center relative my-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={scopeData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={75}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {scopeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Total course badge inside Pie */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-4">
+                    <span className="text-2xl font-bold text-slate-900">{totalCourses}</span>
+                    <span className="text-[10px] font-semibold text-slate-400 font-mono">Total Matrix</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+                  {scopeData.map((item, index) => (
+                    <div key={item.name} className="flex items-center space-x-2">
+                      <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                      <span className="text-slate-600 truncate max-w-[120px]">{item.name}:</span>
+                      <span className="font-bold text-slate-800 font-mono ml-auto">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          if (widget.id === 'widget-calendar-tracks') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4`}>
+                <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Scheduled L&D Calendar Tracks</h3>
+                    <p className="text-xs text-slate-500">Upcoming training slots scheduled by HRM/4/010</p>
+                  </div>
+                  <button 
+                    onClick={() => onNavigate('calendar')}
+                    className="text-xs text-sky-600 hover:text-sky-700 font-semibold cursor-pointer"
+                  >
+                    Configure
+                  </button>
+                </div>
+
+                {upcomingEvents.length === 0 ? (
+                  <div className="h-48 flex flex-col items-center justify-center text-slate-400 text-xs space-y-1">
+                    <span>All currently scheduled courses are completed.</span>
+                    <button 
+                      onClick={onQuickSchedule}
+                      className="text-sky-600 hover:underline font-semibold text-xs mt-1"
+                    >
+                      Schedule an event now
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 cursor-pointer overflow-y-auto max-h-[220px]">
+                    {upcomingEvents.map(evt => {
+                      const crs = courses.find(c => c.id === evt.courseId);
+                      return (
+                        <div 
+                          key={evt.id} 
+                          onClick={() => onNavigate('attendance')}
+                          className="flex justify-between items-center p-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-150 rounded-xl transition-all font-sans"
+                        >
+                          <div className="space-y-1 overflow-hidden">
+                            <span className="inline-block px-1.5 py-0.5 bg-slate-900 text-white rounded font-mono text-[9px] font-semibold">
+                              {crs?.id || "N/A"}
+                            </span>
+                            <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">
+                              {crs?.name}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 font-mono">Ref: {evt.trgRef} | Time: {evt.time}</p>
+                          </div>
+                          <div className="text-right space-y-1 shrink-0 ml-4">
+                            <span className="text-[10px] text-slate-500 font-semibold block">
+                              {evt.date}
+                            </span>
+                            <span className="inline-block px-2 py-0.5 bg-sky-100 text-sky-850 rounded text-[9px] font-semibold tracking-wider font-mono">
+                              {evt.attendees.length} Nominated
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          if (widget.id === 'widget-needs-assessment') {
+            return (
+              <div key={widget.id} className={`${sizeClass} bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4`}>
+                <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Active Needs Assessment Logs</h3>
+                    <p className="text-xs text-slate-500">Individual & departmental assessments awaiting post-training evaluation</p>
                   </div>
                   <button 
                     onClick={() => onNavigate('pre')}
-                    className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                    className="text-xs text-sky-600 hover:text-sky-700 font-semibold cursor-pointer"
                   >
-                    Verify
+                    Open Module
                   </button>
                 </div>
-              );
-            })}
 
-            {departmentalPre.filter(p => !p.isEvaluated).map(dept => (
-              <div key={dept.id} className="p-3 bg-orange-50/50 border border-orange-100 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="inline-block px-1.5 py-0.5 bg-orange-100 text-orange-850 rounded text-[9px] font-bold tracking-wider uppercase font-mono mr-2">
-                     Dept
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Ref: {dept.id}</span>
-                  <h4 className="text-xs font-bold text-slate-900 mt-1">{dept.trainingSubject}</h4>
-                  <p className="text-[10px] text-slate-500 font-medium">Department: {dept.department}</p>
+                <div className="space-y-3 max-h-[220px] overflow-y-auto">
+                  {individualPre.filter(p => !p.isEvaluated).map(ind => {
+                    const emp = employees.find(e => e.code === ind.employeeCode);
+                    return (
+                      <div key={ind.id} className="p-3 bg-red-50/50 border border-red-100 rounded-xl flex items-center justify-between">
+                        <div className="overflow-hidden mr-2">
+                          <span className="inline-block px-1.5 py-0.5 bg-red-100 text-red-800 rounded text-[9px] font-bold tracking-wider uppercase font-mono mr-2">
+                             Individual
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">Ref: {ind.id}</span>
+                          <h4 className="text-xs font-bold text-slate-900 mt-1 truncate">{ind.trainingSubject}</h4>
+                          <p className="text-[10px] text-slate-500 font-medium truncate">For Employee: {emp?.name || ind.employeeCode} ({emp?.designation})</p>
+                        </div>
+                        <button 
+                          onClick={() => onNavigate('pre')}
+                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0"
+                        >
+                          Verify
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {departmentalPre.filter(p => !p.isEvaluated).map(dept => (
+                    <div key={dept.id} className="p-3 bg-orange-50/50 border border-orange-100 rounded-xl flex items-center justify-between font-sans">
+                      <div className="overflow-hidden mr-2">
+                        <span className="inline-block px-1.5 py-0.5 bg-orange-100 text-orange-850 rounded text-[9px] font-bold tracking-wider uppercase font-mono mr-2">
+                           Dept
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">Ref: {dept.id}</span>
+                        <h4 className="text-xs font-bold text-slate-900 mt-1 truncate">{dept.trainingSubject}</h4>
+                        <p className="text-[10px] text-slate-500 font-medium truncate">Department: {dept.department}</p>
+                      </div>
+                      <button 
+                        onClick={() => onNavigate('pre')}
+                        className="px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                  ))}
+
+                  {pendingTnaCount === 0 && (
+                    <div className="h-44 flex flex-col items-center justify-center text-slate-400 text-xs">
+                      <span>All training need assessments successfully evaluated!</span>
+                      <span className="text-[10px] text-slate-400 font-mono mt-0.5">Perfect compliance status</span>
+                    </div>
+                  )}
                 </div>
-                <button 
-                  onClick={() => onNavigate('pre')}
-                  className="px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold cursor-pointer"
-                >
-                  Verify
-                </button>
               </div>
-            ))}
+            );
+          }
 
-            {pendingTnaCount === 0 && (
-              <div className="h-44 flex flex-col items-center justify-center text-slate-400 text-xs">
-                <span>All training need assessments successfully evaluated!</span>
-                <span className="text-[10px] text-slate-400 font-mono mt-0.5">Perfect compliance status</span>
+          // Fallback Custom widget
+          return (
+            <div key={widget.id} className={`${sizeClass} bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] flex items-center space-x-4`}>
+              <div className={`p-3 rounded-xl text-white shrink-0 ${
+                widget.customColor === 'emerald' ? 'bg-emerald-600 text-white' :
+                widget.customColor === 'amber' ? 'bg-amber-500 text-slate-950' :
+                widget.customColor === 'rose' ? 'bg-red-650 text-white' :
+                widget.customColor === 'indigo' ? 'bg-indigo-650 text-white' : 'bg-blue-600 text-white'
+              }`}>
+                <Award className="w-5 h-5 pointer-events-none" />
               </div>
-            )}
-          </div>
-        </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-slate-500 font-semibold truncate uppercase tracking-wider">{widget.title}</p>
+                <p className="text-2xl font-black text-slate-900 leading-none my-1">{widget.customVal}</p>
+                <p className="text-[10px] text-violet-605 text-violet-700 font-mono font-extrabold truncate">Custom Target Benchmark</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ------------------ ADMINISTRATIVE slate CONSOLE & IMPORT UTILITY ------------------ */}
