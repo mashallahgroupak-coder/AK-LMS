@@ -1503,13 +1503,6 @@ export default function App() {
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Reset Defaults</span>
             </button>
-            
-            <button
-              onClick={() => setActiveTab('nomination')}
-              className="bg-blue-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
-            >
-              New Nomination
-            </button>
           </div>
         </header>
 
