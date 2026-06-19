@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Course } from '../types';
-import { BookOpen, Search, Plus, SlidersHorizontal, Layers, GraduationCap, Clock, HelpCircle, X, Edit3, Trash2 } from 'lucide-react';
+import { BookOpen, Search, Plus, SlidersHorizontal, Layers, GraduationCap, Clock, HelpCircle, X, Edit3, Trash2, ExternalLink } from 'lucide-react';
 
 interface TrainingLibraryProps {
   courses: Course[];
@@ -233,6 +233,31 @@ export const TrainingLibrary: React.FC<TrainingLibraryProps> = ({
                   ))}
                 </ul>
               </div>
+
+              {/* Linked Google Drive E-Learning Assets */}
+              {(crs as any).driveAttachments && (crs as any).driveAttachments.length > 0 && (
+                <div className="pt-2.5 mt-2 border-t border-dashed border-slate-105 space-y-1.5">
+                  <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider flex items-center gap-1 leading-none">
+                    <span>📁</span>
+                    <span>Live Learning Material ({ (crs as any).driveAttachments.length } files):</span>
+                  </h4>
+                  <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+                    {(crs as any).driveAttachments.map((att: any) => (
+                      <a
+                        key={att.fileId}
+                        href={att.webViewLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between text-[10px] bg-indigo-50/50 hover:bg-slate-100 text-indigo-700 font-bold p-1.5 rounded-lg border border-indigo-100/50 truncate transition-all leading-tight"
+                        title={`Click to read ${att.fileName}`}
+                      >
+                        <span className="truncate pr-1">🗂️ {att.fileName}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">

@@ -4,9 +4,18 @@ import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth();
+
 export const googleProvider = new GoogleAuthProvider();
+// Add Google Drive scopes for our Enterprise LMS Training Library integration
+googleProvider.addScope('https://www.googleapis.com/auth/drive');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.metadata');
+
+// In-memory cache for the access token to ensure security
+let cachedAccessToken: string | null = null;
 
 export enum OperationType {
   CREATE = 'create',
@@ -55,10 +64,23 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+// Set/Get cached access token
+export function setCachedAccessToken(token: string | null) {
+  cachedAccessToken = token;
+}
+
+export function getCachedAccessToken(): string | null {
+  return cachedAccessToken;
+}
+
 // Google Authentication login helper
 export async function loginWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+    }
     return result.user;
   } catch (error) {
     console.error('Google Auth Login Error:', error);
@@ -70,6 +92,7 @@ export async function loginWithGoogle() {
 export async function logoutUser() {
   try {
     await signOut(auth);
+    cachedAccessToken = null;
   } catch (error) {
     console.error('Logout error:', error);
     throw error;

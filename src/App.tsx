@@ -12,6 +12,7 @@ import { UnitStatsAnalysis } from './components/UnitStatsAnalysis';
 import { PostAssessment } from './components/PostAssessment';
 import { TrainingReports } from './components/TrainingReports';
 import { AgiDenimLogo } from './components/AgiDenimLogo';
+import { GoogleDriveLibrary } from './components/GoogleDriveLibrary';
 
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot } from 'firebase/firestore';
@@ -1101,6 +1102,7 @@ export default function App() {
     { id: 'skills', name: 'Skill Matrix', icon: Grid },
     { id: 'calendar', name: 'Training Calendar', icon: CalendarDays },
     { id: 'library', name: 'Training Library', icon: BookOpenText },
+    { id: 'drive', name: 'Google Drive Assets', icon: Database },
     { id: 'nomination', name: 'Nomination', icon: SendToBack },
     { id: 'attendance', name: 'Attendance', icon: ClipboardList },
     { id: 'unit-stats', name: 'Unit-wise Stats', icon: BarChart4 },
@@ -1274,6 +1276,13 @@ export default function App() {
                     feedbacks={db.feedbacks}
                     postMarks={db.postMarks}
                     individualPre={db.individualPre}
+                  />
+                )}
+
+                {activeTab === 'drive' && (
+                  <GoogleDriveLibrary 
+                    courses={db.courses}
+                    onUpdateCourse={handleEditCourse}
                   />
                 )}
               </div>
@@ -1638,6 +1647,13 @@ export default function App() {
                 feedbacks={db.feedbacks}
                 postMarks={db.postMarks}
                 individualPre={db.individualPre}
+              />
+            )}
+
+            {activeTab === 'drive' && (
+              <GoogleDriveLibrary 
+                courses={db.courses}
+                onUpdateCourse={handleEditCourse}
               />
             )}
           </div>
